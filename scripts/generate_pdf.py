@@ -356,9 +356,25 @@ hr {{
         f.write(full_html)
     print(f"HTML generated at {HTML_OUT}")
 
+def find_chrome():
+    """مسیر Chrome/Chromium: متغیر CHROME_PATH، یا مسیرهای رایج در مک، ویندوز و لینوکس"""
+    import shutil
+
+    candidates = [
+        os.environ.get("CHROME_PATH"),
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+    ] + [shutil.which(n) for n in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "chrome")]
+    for path in candidates:
+        if path and os.path.exists(path):
+            return path
+    raise SystemExit("Chrome پیدا نشد؛ مسیر آن را در متغیر محیطی CHROME_PATH بگذارید.")
+
+
 def render_pdf():
     chrome_cmd = [
-        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        find_chrome(),
         "--headless=new",
         "--disable-gpu",
         "--no-sandbox",

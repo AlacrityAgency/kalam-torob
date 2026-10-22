@@ -29,10 +29,10 @@ HUBS = {
     "چارسو": {"malls": ["پاساژ چارسو"], "street": "خیابان جمهوری", "cats": ["mobile", "headphone", "case", "screen", "charger", "watch", "laptop"]},
     "علاءالدین": {"malls": ["پاساژ علاءالدین"], "street": "چهارراه استانبول", "cats": ["mobile", "case", "screen", "charger", "headphone", "watch"]},
     "پایتخت": {"malls": ["مجتمع تجاری پایتخت"], "street": "خیابان میرداماد", "cats": ["laptop", "mouse", "headphone", "charger", "watch"]},
-    "لاله زار": {"malls": ["بازار لاله زار"], "street": "خیابان لاله زار", "cats": ["cable", "fuse", "generator", "pump", "pump_acc", "drill", "socket"]},
+    "لاله زار": {"malls": ["بازار لاله زار"], "street": "خیابان لاله زار", "cats": ["cable", "fuse", "generator", "pump", "pump_acc", "drill", "bits", "socket"]},
     "امجد": {"malls": ["پاساژ امجد"], "street": "خیابان جمهوری", "cats": ["cctv", "socket", "hdd", "cable"]},
-    "سپه سالار": {"malls": ["پاساژ سپه سالار"], "street": "خیابان سپه سالار", "cats": ["shoes"]},
-    "بازار بزرگ": {"malls": ["بازار بزرگ تهران"], "street": "خیابان ۱۵ خرداد", "cats": ["shoes", "case", "charger"]},
+    "سپه سالار": {"malls": ["پاساژ سپه سالار"], "street": "خیابان سپه سالار", "cats": ["shoes", "socks"]},
+    "بازار بزرگ": {"malls": ["بازار بزرگ تهران"], "street": "خیابان ۱۵ خرداد", "cats": ["shoes", "socks", "case", "charger"]},
 }
 
 # دسته‌ها با نام‌هایی که در الگوریتم‌ها (HEAVY_CATEGORIES، complementary_rules) استفاده شده‌اند
@@ -84,12 +84,19 @@ CATEGORIES = {
         ("شیائومی", "مچ بند هوشمند شیائومی مدل Smart Band 8", 1_900_000),
         ("سامسونگ", "ساعت هوشمند سامسونگ مدل Galaxy Watch6 44mm", 11_000_000),
     ]),
-    "shoes": ("کفش و کتونی", [
+    "shoes": ("کتانی و کفش اسپرت", [
         ("اسکچرز", "کفش پیاده روی مردانه اسکچرز مدل Go Walk 6", 3_400_000),
         ("نایکی", "کتونی رانینگ مردانه نایکی مدل Air Zoom Pegasus 40", 5_800_000),
         ("آدیداس", "کتونی رانینگ آدیداس مدل Duramo SL", 2_700_000),
         ("ملی", "کفش طبی راحتی ملی مدل پیاده روی سبک", 1_450_000),
         ("متفرقه", "کفش طبی زنانه مدل ارتوپدی راحتی", 890_000),
+        ("نایکی", "کتونی نایکی مدل Air Force 1 سفید", 4_900_000),
+    ]),
+    "socks": ("جوراب", [
+        ("متفرقه", "جوراب ورزشی نخی ساق کوتاه بسته ۳ عددی", 180_000),
+    ]),
+    "bits": ("مته و سه نظام", [
+        ("بوش", "ست مته بتن بوش ۵ عددی", 650_000),
     ]),
     "cctv": ("دوربین مدار بسته", [
         ("هایک ویژن", "دوربین مداربسته بولت هایک ویژن مدل DS-2CE16D0T دید در شب", 1_650_000),
@@ -128,6 +135,12 @@ CATEGORIES = {
     ]),
 }
 
+SPECS = {
+    "mobile": {"شبکه": "5G", "حافظه داخلی": "256 گیگابایت", "رم": "8 گیگابایت", "اندازه صفحه": "6.6 اینچ"},
+    "laptop": {"پردازنده": "Core i5", "رم": "16 گیگابایت", "حافظه": "512 گیگابایت SSD", "صفحه": "15.6 اینچ"},
+    "headphone": {"نوع اتصال": "بلوتوث", "حذف نویز": "دارد"},
+}
+
 SHOP_PREFIXES = ["فروشگاه", "موبایل", "دیجیتال", "گالری", "بازرگانی", "تجهیزات", "پخش"]
 SHOP_NAMES = ["آرین", "پارسیان", "نوین", "ستاره", "کیان", "مهرگان", "آوا", "سپهر", "رایان", "امید",
               "پرشین", "تک", "آسمان", "دانیال", "ماهان", "کوثر", "نگین", "البرز", "صدرا", "آریا"]
@@ -139,7 +152,23 @@ FLOORS = [
     (["دوم", "۲"], 2),
     (["سوم", "3"], 1),
 ]
-PROVIDERS = ["snapp_pay", "torob_pay", "tara", "digi_pay"]
+# مثل دیتاست واقعی: نام درگاه فارسی و کانال بیشتر unknown/online
+PROVIDERS = ["اسنپ‌پی", "ترب‌پی", "تارا", "دیجی‌پی", "ازکی‌وام"]
+CHANNELS = ["unknown", "unknown", "online", "in_person"]
+
+# قالب‌های مختلف ساعت کاری؛ حدود ۳۰٪ فروشگاه‌ها مثل دیتاست واقعی ساعت کاری ندارند ({})
+HOURS_TEMPLATES = [
+    {"saturday": "10:00-20:00", "sunday": "10:00-20:00", "monday": "10:00-20:00", "tuesday": "10:00-20:00",
+     "wednesday": "10:00-20:00", "thursday": "10:00-14:00"},
+    {"شنبه": ["10:00-14:00", "16:00-21:00"], "یکشنبه": ["10:00-14:00", "16:00-21:00"],
+     "دوشنبه": ["10:00-14:00", "16:00-21:00"], "سه‌شنبه": ["10:00-14:00", "16:00-21:00"],
+     "چهارشنبه": ["10:00-14:00", "16:00-21:00"], "پنجشنبه": ["10:00-15:00"], "جمعه": ["16:00-20:00"]},
+    {"saturday": [{"start": "09:30", "end": "19:00"}], "sunday": [{"start": "09:30", "end": "19:00"}],
+     "monday": [{"start": "09:30", "end": "19:00"}], "tuesday": [{"start": "09:30", "end": "19:00"}],
+     "wednesday": [{"start": "09:30", "end": "19:00"}], "thursday": [{"start": "09:30", "end": "13:30"}]},
+    {"saturday": "00:00-00:00"},
+]
+SELLER_NOTES = [None, None, None, None, "تست و تحویل در حضور مشتری", "فروش با فاکتور رسمی"]
 WARRANTIES = ["گارانتی ۱۸ ماهه شرکتی", "گارانتی ۱۲ ماهه", "گارانتی اصالت و سلامت فیزیکی", None]
 
 
@@ -166,10 +195,13 @@ def build_shops():
             unit_part = random.choice([f"، واحد {fa(unit)}", f"، پلاک {unit}", f" واحد {fa(unit)}", ""])
             address = f"تهران، {info['street']}، {mall}، طبقه {weighted_floor()}{unit_part}"
             payment = []
-            for p in random.sample(PROVIDERS, k=random.randint(0, 2)):
-                payment.append({"provider_name": p, "channel": random.choice(["in_person", "in_person", "online"])})
-            contacts = [{"type": "phone", "value": f"0210000{random.randint(1000, 9999)}"}]
-            hours = {"sat-wed": "10:00-20:00", "thu": "10:00-14:00"}
+            for p in random.sample(PROVIDERS, k=random.choice([0, 0, 1, 1, 2])):
+                payment.append({"provider_name": p, "channel": random.choice(CHANNELS)})
+            contacts = [{"channel": "phone", "display_number": fa(f"0210000{random.randint(1000, 9999)}")}]
+            hours = random.choice(HOURS_TEMPLATES) if random.random() > 0.3 else {}
+            verified = random.random() < 0.08
+            # حدود ۲۰٪ فروشگاه‌ها مثل دیتاست واقعی آفری ندارند و فقط دسته فعالیتشان معلوم است
+            category_only = random.random() < 0.2
             shops.append({
                 "shop_id": str(sid),
                 "name": name,
@@ -180,11 +212,11 @@ def build_shops():
                 "payment_options": json.dumps(payment, ensure_ascii=False) if payment else "null",
                 "contacts": json.dumps(contacts, ensure_ascii=False),
                 "weekly_hours": json.dumps(hours, ensure_ascii=False),
-                "instagram": "null",
-                "website_url": "null",
-                "supports_fast_delivery": random.choice(["true", "false"]),
-                "category_names": "null",
-                "_cats": info["cats"],
+                "instagram": f"kalam_sample_{sid}" if verified and sid % 2 else "null",
+                "website_url": f"https://example.com/shop/{sid}" if verified and not sid % 2 else "null",
+                "supports_fast_delivery": random.choice(["true", "false", "null"]),
+                "category_names": json.dumps([CATEGORIES[c][0] for c in info["cats"]], ensure_ascii=False),
+                "_cats": [] if category_only else info["cats"],
             })
     return shops
 
@@ -201,7 +233,7 @@ def build_products():
                 "category_name": cat_name,
                 "brand_name": brand,
                 "model": "null",
-                "specs": "null",
+                "specs": json.dumps(SPECS.get(key, {}), ensure_ascii=False) if key in SPECS else "null",
                 "image_urls": "[]",
                 "_key": key,
                 "_base": base,
@@ -223,16 +255,24 @@ def build_offers(shops, products):
                     continue
                 oid += 1
                 price = int(p["_base"] * random.uniform(0.93, 1.12) / 10_000) * 10_000
+                note = random.choice(SELLER_NOTES)
+                roll = random.random()
+                if roll < 0.04:
+                    # آفر کپی با قیمت خیلی پایین (مثل ایرپاد ۶۰۰ هزاری کنار اورجینال)
+                    price = int(p["_base"] * 0.05 / 10_000) * 10_000 or 10_000
+                    note = random.choice(["طرح اصلی", "های‌کپی", "مستر کپی"])
+                elif roll < 0.06:
+                    price = 1  # قیمت تستی مغازه‌دار
                 changed = now - timedelta(days=random.choice([0, 1, 2, 4, 7, 12, 20, 35, 70, 120]), hours=random.randint(0, 23))
                 offers.append({
                     "offer_id": str(oid),
                     "product_id": p["product_id"],
                     "shop_id": s["shop_id"],
                     "price_toman": str(price) if random.random() > 0.04 else "null",
-                    "last_price_changed_at": changed.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "last_price_changed_at": changed.strftime("%Y-%m-%dT%H:%M:%SZ") if random.random() > 0.03 else "null",
                     "warranty": random.choice(WARRANTIES) or "null",
                     "description": "null",
-                    "seller_title": s["name"],
+                    "seller_title": note or "null",
                 })
     return offers
 
@@ -248,6 +288,9 @@ def write_csv(name, rows, columns):
 
 if __name__ == "__main__":
     os.makedirs(DATASET_DIR, exist_ok=True)
+    # نشانه برای build_db.py تا رابط کاربری بنر «داده نمونه» نشان دهد
+    with open(os.path.join(DATASET_DIR, "SAMPLE_DATA"), "w", encoding="utf-8") as f:
+        f.write("این پوشه داده نمونه و ساختگی دارد (scripts/generate_sample_dataset.py).\n")
     shops = build_shops()
     products = build_products()
     offers = build_offers(shops, products)

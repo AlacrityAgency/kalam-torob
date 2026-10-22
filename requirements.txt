@@ -2,3 +2,5 @@ fastapi>=0.100.0
 uvicorn>=0.23.0
 pydantic>=2.0.0
 markdown>=3.4.0
+# اختیاری: درک پیام با Claude (فقط اگر ANTHROPIC_API_KEY تنظیم شود)
+anthropic>=2.1.0

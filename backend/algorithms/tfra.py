@@ -5,6 +5,7 @@
 
 import math
 
+from .hours import hours_status
 from .imwp import parse_mall_address
 
 # سقف کاندیداهای بررسی‌شده؛ لایه‌بندی پس از خواندن همه انجام می‌شود تا مغازه‌های نزدیک اما گران‌تر حذف نشوند
@@ -54,10 +55,11 @@ def find_emergency_fallbacks(db_conn, product_id: str, failed_shop_id: str):
     # جستجوی تمام مغازه‌های دیگر دارای این محصول با قیمت معتبر
     cursor.execute("""
     SELECT s.shop_id, s.name, s.address, s.location_label, s.payment_options, s.contacts,
-           o.price_toman, o.warranty, o.last_price_changed_at, s.lat, s.lon
+           o.price_toman, o.warranty, o.last_price_changed_at, s.lat, s.lon, s.weekly_hours
     FROM offers o
     JOIN shops s ON o.shop_id = s.shop_id
     WHERE o.product_id = ? AND s.shop_id != ? AND o.price_toman IS NOT NULL
+      AND o.is_copy = 0 AND o.price_suspect = 0
     ORDER BY o.price_toman ASC
     LIMIT ?;
     """, (product_id, failed_shop_id, MAX_CANDIDATES))
@@ -69,7 +71,7 @@ def find_emergency_fallbacks(db_conn, product_id: str, failed_shop_id: str):
     seen_shops = set()
 
     for c in candidates:
-        csid, cname, caddr, cloc, cpay, ccontacts, price, warranty, last_ch, clat, clon = c
+        csid, cname, caddr, cloc, cpay, ccontacts, price, warranty, last_ch, clat, clon, chours = c
         # هر مغازه یک بار (ارزان‌ترین پیشنهادش)
         if csid in seen_shops:
             continue
@@ -88,6 +90,7 @@ def find_emergency_fallbacks(db_conn, product_id: str, failed_shop_id: str):
             "last_price_changed_at": last_ch,
             "payment_options": cpay,
             "distance_km": round(distance, 2) if distance is not None else None,
+            "hours": hours_status(chours),
         }
 
         same_mall = _in_same_mall(base_parsed, sloc, c_parsed, cloc)
@@ -105,10 +108,18 @@ def find_emergency_fallbacks(db_conn, product_id: str, failed_shop_id: str):
             candidate_obj["tier_badge"] = f"راسته {cloc}" if cloc else "راسته دیگر"
             layer3_same_hub.append(candidate_obj)
 
-    # در لایه ۲ نزدیک‌ترین طبقه، در لایه ۳ نزدیک‌ترین مسافت اولویت دارد (قیمت معیار دوم)
-    if base_parsed["floor_known"]:
-        layer2_same_mall.sort(key=lambda x: (abs(x["parsed_address"]["floor_level"] - base_floor), x["price_toman"]))
-    layer3_same_hub.sort(key=lambda x: (x["distance_km"] is None, x["distance_km"] or 0, x["price_toman"]))
+    # مغازه‌ای که الان بسته است جایگزین فوری نیست؛ در هر لایه آخر می‌آید.
+    # در لایه ۲ نزدیک‌ترین طبقه، در لایه ۳ نزدیک‌ترین مسافت اولویت دارد (قیمت معیار بعدی)
+    def closed(x):
+        return x["hours"]["state"] == "closed"
+
+    layer1_same_floor.sort(key=lambda x: (closed(x), x["price_toman"]))
+    layer2_same_mall.sort(key=lambda x: (
+        closed(x),
+        abs(x["parsed_address"]["floor_level"] - base_floor) if base_parsed["floor_known"] else 0,
+        x["price_toman"],
+    ))
+    layer3_same_hub.sort(key=lambda x: (closed(x), x["distance_km"] is None, x["distance_km"] or 0, x["price_toman"]))
 
     # ترکیب نتایج با اولویت لایه‌ها
     recommended_fallbacks = (layer1_same_floor[:2] + layer2_same_mall[:2] + layer3_same_hub[:2])[:4]

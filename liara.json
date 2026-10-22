@@ -1,0 +1,11 @@
+{
+  "platform": "docker",
+  "app": "kalam-torob",
+  "port": 8000,
+  "disks": [
+    {
+      "name": "kalam-data",
+      "mountTo": "/data"
+    }
+  ]
+}
