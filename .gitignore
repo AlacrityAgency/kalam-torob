@@ -24,6 +24,8 @@ torob.db-shm
 # Raw Data Archive Files
 dataset/*.csv
 dataset/*.zip
+dataset/SAMPLE_DATA
+*.db.building*
 *.zip
 *.tar.gz
 

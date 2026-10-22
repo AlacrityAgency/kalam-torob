@@ -3,538 +3,121 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>کَلَم | دستیار هوشمند خرید حضوری ترب</title>
-  <meta name="description" content="سیستم فوق‌پیشرفته خرید حضوری ترب (کَلَم) - بهینه‌سازی سبد خرید چندقلمی در پاساژها، ناوبری طبقات، استعلام صوتی و دکمه نجات پنیک">
+  <meta name="theme-color" content="#ffffff">
+  <title>کَلَم | دستیار خرید حضوری ترب</title>
+  <meta name="description" content="کَلَم، دستیار خرید حضوری ترب: مقایسه قیمت مغازه‌های پاساژهای تهران، مسیر خرید چندقلمی، آدرس طبقه و واحد و جایگزین فوری مغازه بسته.">
+  <link rel="icon" href="./logo.jpg">
   <link rel="stylesheet" href="./app.css">
 </head>
 <body>
+  <a class="skip-link" href="#view">رفتن به محتوای اصلی</a>
 
-  <!-- Top Floating Glass Navigation Bar -->
-  <header class="navbar" id="app-navbar">
-    <div class="brand-wrapper" id="brand-home-btn">
-      <img src="./logo.jpg" alt="لوگوی کلم ترب" class="brand-logo-img" id="brand-logo">
-      <div class="brand-info">
-        <h1>
-          <span class="torob-badge">تُـرب</span>
-          <span class="kalam-badge">کَلَـم</span>
-        </h1>
-        <div class="brand-subtitle">
-          <span class="live-indicator"></span>
-          دستیار فوق‌هوشمند خرید حضوری و پاساژگردی • نسخه تجاری ۳.۲
+  <header class="site-header" id="site-header">
+    <div class="container header-row">
+      <a class="brand" href="#/" aria-label="صفحه اصلی کَلَم">
+        <img src="./logo.jpg" alt="" class="brand-logo" width="40" height="40">
+        <span class="brand-text">
+          <span class="brand-name">کَلَم</span>
+          <span class="brand-tag">خرید حضوری ترب</span>
+        </span>
+      </a>
+
+      <form class="search-box header-search" id="header-search" role="search">
+        <input type="search" name="q" id="header-search-input" placeholder="نام کالا را وارد کنید" autocomplete="off" aria-label="جستجوی کالا">
+        <button type="submit" class="search-box-btn" aria-label="جستجو">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </button>
+      </form>
+
+      <div class="header-actions">
+        <div class="hub-picker">
+          <button type="button" class="header-btn" id="hub-btn" aria-haspopup="listbox" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+            <span id="hub-btn-label">همه محدوده‌ها</span>
+            <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <ul class="hub-menu" id="hub-menu" role="listbox" hidden></ul>
         </div>
+        <a class="header-btn cart-link" href="#/cart" aria-label="سبد خرید حضوری">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6.2"/><circle cx="10" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/></svg>
+          <span class="cart-link-text">سبد حضوری</span>
+          <span class="badge-count" id="cart-count" hidden>0</span>
+        </a>
       </div>
     </div>
 
-    <div class="nav-actions">
-      <!-- Commercial Hub Selector -->
-      <div class="hub-select-container">
-        <label for="hub-selector">🏢 مرکز خرید:</label>
-        <select id="hub-selector">
-          <option value="چارسو" selected>چارسو (بازار دیجیتال)</option>
-          <option value="علاءالدین">علاءالدین (موبایل و قطعات)</option>
-          <option value="پایتخت">پایتخت (میرداماد، IT و لپ‌تاپ)</option>
-          <option value="لاله زار">لاله‌زار (صنعتی و الکتریک)</option>
-          <option value="شوش">شوش (لوازم خانگی و بلور)</option>
-          <option value="سپه سالار">سپه‌سالار (کیف و کفش)</option>
-          <option value="فردوسی">فردوسی (مرکز تجارت جهانی)</option>
-          <option value="امجد">امجد (قطعات الکترونیک)</option>
-          <option value="بازار بزرگ">بازار بزرگ تهران (۱۵ خرداد)</option>
-        </select>
-      </div>
-
-      <!-- Offline Mode Toggle -->
-      <button class="offline-toggle-btn" id="offline-mode-btn" title="شبیه‌سازی قطعی آنتن سیم‌کارت در زیرزمین پاساژها">
-        <span class="offline-icon">📡</span>
-        <span id="offline-label">حالت آنلاین</span>
-      </button>
-
-      <!-- Cart Quick Pill Button -->
-      <button class="cart-pill-btn" id="cart-pill-btn">
-        <span>🛒 سبد خرید حضوری</span>
-        <span class="cart-count" id="header-cart-count">3</span>
-      </button>
-    </div>
+    <nav class="cat-nav" aria-label="دسته‌بندی‌ها">
+      <div class="container cat-nav-row" id="cat-nav"></div>
+    </nav>
   </header>
 
-  <!-- Main Application Container -->
-  <main class="app-container">
+  <div class="data-banner" id="data-banner" role="status" hidden></div>
 
-    <!-- Live Market KPI Command Bar -->
-    <section class="market-kpi-bar" aria-label="شاخص‌های زنده بازار فیزیکی">
-      <div class="kpi-card">
-        <div class="kpi-icon-circle kpi-shops">🏬</div>
+  <main id="view" class="view" tabindex="-1"></main>
+
+  <footer class="site-footer">
+    <div class="container footer-row">
+      <div class="footer-brand">
+        <img src="./logo.jpg" alt="" width="32" height="32">
         <div>
-          <div class="kpi-val">۶,۴۷۶ مغازه</div>
-          <div class="kpi-label">فروشگاه فیزیکی فعال در پاساژها</div>
+          <strong>کَلَم</strong>
+          <p>دستیار خرید حضوری ترب؛ مقایسه قیمت، مسیر خرید و آدرس دقیق مغازه‌ها در پاساژهای تهران.</p>
+          <p class="footer-note">در دیتاست آزمایشی ترب، نام بیشتر فروشگاه‌ها و همه شماره‌های تماس ساختگی‌اند؛ فقط فروشگاه‌های دارای نشان «اینستاگرام» یا «وب‌سایت» هویت آنلاین واقعی دارند.</p>
         </div>
       </div>
+      <ul class="footer-links">
+        <li><a href="#/about">درباره کَلَم و الگوریتم‌ها</a></li>
+        <li><a href="./WHITEPAPER_KALAM.pdf" target="_blank" rel="noopener">وایت‌پیپر (PDF)</a></li>
+        <li><a href="#/cart">سبد خرید حضوری</a></li>
+      </ul>
+    </div>
+  </footer>
 
-      <div class="kpi-card">
-        <div class="kpi-icon-circle kpi-products">📦</div>
-        <div>
-          <div class="kpi-val">۲۲۵,۹۰۳ کالا</div>
-          <div class="kpi-label">تنوع محصولات با استعلام قیمت روز</div>
-        </div>
-      </div>
-
-      <div class="kpi-card">
-        <div class="kpi-icon-circle kpi-savings">💰</div>
-        <div>
-          <div class="kpi-val">تا ۳۰٪ سود</div>
-          <div class="kpi-label">صرفه‌جویی در مسیر طلایی پاساژ</div>
-        </div>
-      </div>
-
-      <div class="kpi-card">
-        <div class="kpi-icon-circle kpi-panic">🚨</div>
-        <div>
-          <div class="kpi-val">زیر ۲۰ متر</div>
-          <div class="kpi-label">جایگزینی فوری با دکمه پنیک در همان طبقه</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Kalam 4-Layer Stepper: استعاره کَلَم (پوست‌کندن لایه‌های خرید حضوری در بازار) -->
-    <section class="kalam-layers-container" id="kalam-layers-bar" aria-label="لایه‌های پوست‌کندن خرید در بازار">
-      <div class="layer-step-card active" data-step="1" id="layer-step-1" onclick="app.activateLayer(1)" title="لایه ۱: انتخاب پاساژ و هاب تجاری">
-        <div class="layer-number-badge">L1</div>
-        <div>
-          <div class="layer-text-title">لایه ۱: قطب تجاری و هاب</div>
-          <div class="layer-text-desc">۹ قطب فعال • بورس کالا و ترافیک</div>
-        </div>
-      </div>
-      <div class="layer-step-card" data-step="2" id="layer-step-2" onclick="app.activateLayer(2)" title="لایه ۲: نقشه طبقات و مسیر بهینه">
-        <div class="layer-number-badge">L2</div>
-        <div>
-          <div class="layer-text-title">لایه ۲: نقشه طبقات و مسیر</div>
-          <div class="layer-text-desc">کاهش خستگی • صعود متوالی پله‌برقی</div>
-        </div>
-      </div>
-      <div class="layer-step-card" data-step="3" id="layer-step-3" onclick="app.activateLayer(3)" title="لایه ۳: استعلام واحد و پیشخوان">
-        <div class="layer-number-badge">L3</div>
-        <div>
-          <div class="layer-text-title">لایه ۳: استعلام واحد و پیشخوان</div>
-          <div class="layer-text-desc">تماس ۱۲ ثانیه‌ای • پلاک دقیق مغازه</div>
-        </div>
-      </div>
-      <div class="layer-step-card" data-step="4" id="layer-step-4" onclick="app.activateLayer(4)" title="لایه ۴: تحویل، تست و دکمه نجات">
-        <div class="layer-number-badge">L4</div>
-        <div>
-          <div class="layer-text-title">لایه ۴: چک‌لیست و دکمه نجات</div>
-          <div class="layer-text-desc">تست اصالت کالا • نجات از بسته‌بودن</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Segmented Navigation Tabs -->
-    <nav class="tabs-nav" id="tabs-nav">
-      <button class="tab-btn active" data-tab="tab-chat" id="btn-tab-chat">
-        <span>💬</span> گفتگوی هوشمند و دستیار خریدار (AI Assistant)
-      </button>
-      <button class="tab-btn" data-tab="tab-cart" id="btn-tab-cart">
-        <span>🗺️</span> مسیریاب سبد خرید حضوری (IP-CRP)
-      </button>
-      <button class="tab-btn" data-tab="tab-market" id="btn-tab-market">
-        <span>🔍</span> کاوشگر ویترین و محصولات بازار
-      </button>
-      <button class="tab-btn" data-tab="tab-dossier" id="btn-tab-dossier">
-        <span>📞</span> استعلام صوتی و چک‌لیست تحویل (SVDP)
-      </button>
-      <button class="tab-btn" data-tab="tab-whitepaper" id="btn-tab-whitepaper">
-        <span>📑</span> وایت‌پیپر و الگوریتم‌های ۷گانه
-      </button>
-    </nav>
-
-    <!-- Tab 1: AI Assistant Console -->
-    <section class="tab-content-view" id="view-chat">
-      <div class="chat-grid">
-        <!-- Main Chat Box -->
-        <div class="chat-box matte-card">
-          <div class="chat-header">
-            <div class="chat-header-title">
-              <span class="live-indicator"></span>
-              <div>
-                <strong>دستیار هوشمند کَلَم</strong>
-                <div style="font-size: 0.8rem; color: var(--text-secondary);">متصل به پایگاه داده ۲۲۵,۹۰۳ محصول و ۶,۴۷۶ مغازه فعال ترب</div>
-              </div>
-            </div>
-            <button class="chip-btn" id="clear-chat-btn">پاکسازی گفتگو</button>
-          </div>
-
-          <div class="chat-messages" id="chat-messages">
-            <!-- Messages rendered dynamically -->
-          </div>
-
-          <div class="chat-input-area">
-            <input type="text" class="chat-input" id="chat-input" placeholder="مثلاً: دنبال لپتاپ و ماوس در پاساژ پایتخت هستم یا مغازه بسته بود..." />
-            <button class="chat-send-btn" id="chat-send-btn" title="ارسال پیام">➤</button>
-          </div>
-        </div>
-
-        <!-- Chat Sidebar / Live Assistant Insights -->
-        <aside class="chat-sidebar">
-          <div class="insight-card matte-card">
-            <h3>⚡ تست‌های سریع هکاتون</h3>
-            <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-              <button class="chip-btn quick-prompt-btn" data-prompt="من یک لپتاپ ایسوس و ماوس لاجیتک میخوام برام مسیر پاساژ پایتخت رو بچین">
-                💻 پک اداری در پایتخت (تست سبد چندقلمی)
-              </button>
-              <button class="chip-btn quick-prompt-btn" data-prompt="دنبال یه کفش کتونی خوب برای پیاده‌روی هستم">
-                👟 غربالگری نیاز کفش (تست INDP منتور)
-              </button>
-              <button class="chip-btn quick-prompt-btn" data-prompt="مغازه مدنظرم در پاساژ بسته بود یا کالا ناموجوده">
-                🚨 بسته بودن مغازه (تست دکمه پنیک TFRA)
-              </button>
-              <button class="chip-btn quick-prompt-btn" data-prompt="فروشگاه‌های حضوری دارای اقساط اسنپ پی در چارسو">
-                💳 خرید قسطی اسنپ‌پی (تست CrediPay)
-              </button>
-              <button class="chip-btn quick-prompt-btn" data-prompt="پک تجهیزات کارگاهی الکتروموتور و سیم برق در لاله زار">
-                ⚡ کالای سنگین در لاله‌زار (قید Heavy-Item)
-              </button>
-            </div>
-          </div>
-
-          <div class="insight-card matte-card">
-            <h3>🛡️ وضعیت گاردریل‌های ۵گانه</h3>
-            <ul style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.9; list-style: none;">
-              <li>✅ <strong>دیتابیس‌محور:</strong> بدون توهم و عدم تولید داده ساختگی</li>
-              <li>✅ <strong>اعتبارسنجی قیمت:</strong> تنزیل زمانی قیمت با SVDP</li>
-              <li>✅ <strong>قید کالای سنگین:</strong> تحویل در ایستگاه آخر مسیر</li>
-              <li>✅ <strong>رد جانشین رقیب:</strong> فیلتر برندهای هم‌عرض در PACO</li>
-              <li>✅ <strong>پیمایش تک‌جهته:</strong> عدم نوسان بین طبقات پاساژ</li>
-            </ul>
-          </div>
-        </aside>
-      </div>
-    </section>
-
-    <!-- Tab 2: IP-CRP Golden Path Multi-Item Router -->
-    <section class="tab-content-view" id="view-cart" style="display: none;">
-      <div class="cart-builder-section">
-        <!-- Cart Items List & Selector -->
-        <div class="cart-items-panel matte-card">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="font-size: 1.1rem; font-weight: 800;">📋 اقلام سبد خرید حضوری</h3>
-            <span class="strategy-badge" id="cart-items-counter-badge">۳ کالا</span>
-          </div>
-          <p style="font-size: 0.85rem; color: var(--text-secondary);">
-            اقلام زیر را انتخاب کنید تا کَلَم کمترین پیاده‌روی و بیشترین سود خرید را در پاساژ بچیند:
-          </p>
-
-          <div id="cart-items-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
-            <!-- Rendered dynamically -->
-          </div>
-
-          <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.6rem;">
-            <button class="btn-primary-sm" id="btn-recompute-route">🔄 محاسبه مجدد مسیر بهینه</button>
-            <button class="btn-outline-sm" id="btn-load-sample-preset">📦 لود سبد نمونه دیجیتال (پایتخت / چارسو)</button>
-            <button class="btn-outline-sm" id="btn-load-industrial-preset">⚡ لود سبد نمونه کارگاهی (لاله‌زار)</button>
-          </div>
-        </div>
-
-        <!-- Route Visualization & Strategy Output -->
-        <div class="route-output-panel">
-          <!-- Strategy Comparison Cards -->
-          <div class="strategy-cards-grid">
-            <div class="strategy-card active" id="strat-same-hub" onclick="app.selectStrategy('same_hub')">
-              <span class="strategy-badge">🌟 پیشنهاد طلایی کلم</span>
-              <h4 style="font-weight: 800;">مسیر طلایی پاساژ (Same-Hub)</h4>
-              <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 2px;">پیمایش یک‌طرفه طبقات با کمترین خستگی</p>
-              <div class="strategy-price" id="strat-same-hub-price">در حال محاسبه...</div>
-              <div style="font-size: 0.85rem; color: var(--kalam-emerald); font-weight: 700;">توقف‌ها: <span id="strat-same-hub-stops">-</span> • زمان: <span id="strat-same-hub-time">-</span></div>
-            </div>
-
-            <div class="strategy-card" id="strat-single-stop" onclick="app.selectStrategy('single_stop')">
-              <h4 style="font-weight: 800;">تک‌فروشگاه (Single-Stop)</h4>
-              <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 2px;">یک فاکتور بدون جابه‌جایی بین مغازه‌ها</p>
-              <div class="strategy-price" id="strat-single-stop-price">-</div>
-              <div style="font-size: 0.85rem; color: var(--text-muted);">بدون پیاده‌روی (با هزینه بیشتر فاکتور)</div>
-            </div>
-
-            <div class="strategy-card" id="strat-bargain" onclick="app.selectStrategy('bargain')">
-              <h4 style="font-weight: 800;">ارزان‌ترین قیمت (City Bargain)</h4>
-              <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 2px;">پایین‌ترین قیمت در کل بازار تهران</p>
-              <div class="strategy-price" id="strat-bargain-price">-</div>
-              <div style="font-size: 0.85rem; color: var(--gold-amber); font-weight: 700;">نیاز به جابه‌جایی بین راسته‌های مجاور</div>
-            </div>
-          </div>
-
-          <!-- Savings Highlight Banner -->
-          <div class="savings-banner" id="savings-banner">
-            <div>
-              <div class="savings-highlight" id="savings-title">💰 صرفه‌جویی چشمگیر در خرید حضوری</div>
-              <div style="font-size: 0.9rem; color: var(--text-primary); margin-top: 0.35rem;" id="savings-desc">
-                با ۳ توقف در طبقات متوالی پاساژ، ۴,۲۰۰,۰۰۰ تومان (۲۱.۴٪) نسبت به خرید از یک مغازه سود می‌کنید!
-              </div>
-            </div>
-            <button class="btn-primary-sm" id="btn-save-offline-route" style="white-space: nowrap;">💾 ذخیره آفلاین مسیر</button>
-          </div>
-
-          <!-- Itinerary Timeline -->
-          <div class="matte-card" style="padding: 1.75rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
-              <h3 style="font-size: 1.2rem; font-weight: 900;">🗺️ برنامه گام‌به‌گام حرکت در پاساژ (پیمایش یک‌طرفه طبقات)</h3>
-              <div style="font-size: 0.9rem; color: var(--cyber-cyan); font-weight: 700;" id="route-summary-stats">
-                ۳ توقف • ۱۳۵ متر پیاده‌روی • تخمین زمان: ۳۵ دقیقه
-              </div>
-            </div>
-
-            <div class="itinerary-timeline" id="itinerary-timeline">
-              <!-- Rendered dynamically -->
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Tab 3: Market Explorer & Product Catalog -->
-    <section class="tab-content-view" id="view-market" style="display: none;">
-      <!-- Search Bar -->
-      <div class="search-bar-section">
-        <div class="search-input-wrapper">
-          <input type="text" class="search-input-field" id="search-input" placeholder="جستجوی فوق‌سریع در میان ۲۲۵,۹۰۳ کالا (مثلاً: لپتاپ ایسوس، سامسونگ، ایرپاد، دریل، کتونی...)" />
-        </div>
-        <button class="search-action-btn" id="search-btn">جستجو در بازار</button>
-      </div>
-
-      <!-- Quick Category Chips -->
-      <div style="display: flex; gap: 0.6rem; overflow-x: auto; margin-bottom: 1.75rem; padding-bottom: 0.5rem;">
-        <button class="chip-btn cat-chip active" data-cat="">همه دسته‌ها</button>
-        <button class="chip-btn cat-chip" data-cat="گوشی موبایل">گوشی موبایل</button>
-        <button class="chip-btn cat-chip" data-cat="هدفون، هدست و هندزفری">هدفون و هندزفری</button>
-        <button class="chip-btn cat-chip" data-cat="لپ تاپ و نوت بوک">لپ‌تاپ</button>
-        <button class="chip-btn cat-chip" data-cat="ساعت و مچ بند هوشمند">ساعت هوشمند</button>
-        <button class="chip-btn cat-chip" data-cat="ابزار برقی و شارژی">ابزار برقی و شارژی</button>
-        <button class="chip-btn cat-chip" data-cat="کفش و کتونی">کفش و کتونی</button>
-      </div>
-
-      <!-- Products Grid -->
-      <div class="products-grid" id="products-grid">
-        <!-- Rendered dynamically -->
-      </div>
-    </section>
-
-    <!-- Tab 4: SVDP Voice Inquiry & Counter Checklist -->
-    <section class="tab-content-view" id="view-dossier" style="display: none;">
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-        <!-- 12-Second Bazaar Phone Script Card -->
-        <div class="matte-card" style="padding: 2rem;">
-          <h3 style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; font-size: 1.2rem; font-weight: 800;">
-            <span>📞</span> اسکریپت استعلام تلفنی ۱۲ ثانیه‌ای (SVDP)
-          </h3>
-          <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
-            این اسکریپت استاندارد بازار بر اساس بررسی‌های میدانی پاساژ علاءالدین و چارسو تدوین شده تا بدون معطلی و در کمتر از ۱۲ ثانیه، موجودی قطعی و قیمت روز استعلام شود:
-          </p>
-
-          <div style="background: rgba(0,0,0,0.35); border-radius: var(--radius-md); padding: 1.35rem; border: 1px solid var(--border-subtle); margin-bottom: 1.25rem;">
-            <div style="font-size: 0.85rem; color: var(--cyber-cyan); font-weight: 700; margin-bottom: 0.5rem;">متن آماده قرائت پای تلفن:</div>
-            <p style="font-size: 1.05rem; line-height: 1.9; font-weight: 500;" id="phone-script-text">
-              «سلام وقت بخیر، از سمت ترب تماس می‌گیرم. آیا مدل گوشی سامسونگ A55 حافظه ۲۵۶ رو موجود دارین و قیمت روزتون همون ۲۱,۴۵۰,۰۰۰ تومان هست؟ برای خرید حضوری تا چه ساعتی تشریف دارید؟»
-            </p>
-          </div>
-
-          <div class="wave-container">
-            <div class="wave-bar"></div>
-            <div class="wave-bar"></div>
-            <div class="wave-bar"></div>
-            <div class="wave-bar"></div>
-            <div class="wave-bar"></div>
-            <div class="wave-bar"></div>
-          </div>
-
-          <div style="display: flex; gap: 0.85rem;">
-            <button class="btn-primary-sm" id="btn-trigger-call" style="flex: 1;">
-              📞 تماس مستقیم با فروشگاه (Click-to-Call)
-            </button>
-            <button class="btn-outline-sm" id="btn-copy-chat-draft">
-              💬 کپی متن رزرو پیام‌رسان
-            </button>
-          </div>
-        </div>
-
-        <!-- 5-Minute In-Person Counter Checklist -->
-        <div class="matte-card" style="padding: 2rem;">
-          <h3 style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; font-size: 1.2rem; font-weight: 800;">
-            <span>📋</span> چک‌لیست ۵ دقیقه‌ای پای پیشخوان مغازه
-          </h3>
-          <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
-            قبل از پرداخت وجه و ترک پیشخوان فروشگاه، این ۴ آزمون ضروری را تیک بزنید:
-          </p>
-
-          <div style="display: flex; flex-direction: column; gap: 1.15rem;">
-            <label style="display: flex; gap: 0.85rem; align-items: flex-start; cursor: pointer; font-size: 0.95rem;">
-              <input type="checkbox" checked style="width: 22px; height: 22px; accent-color: var(--kalam-emerald); margin-top: 2px;">
-              <div>
-                <strong>۱. انطباق سریال کالا و استعلام سامانه همتا</strong>
-                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">کد دستوری *7777# را شماره‌گیری و سریال روی جعبه را با برچسب دستگاه مطابقت دهید.</div>
-              </div>
-            </label>
-
-            <label style="display: flex; gap: 0.85rem; align-items: flex-start; cursor: pointer; font-size: 0.95rem;">
-              <input type="checkbox" style="width: 22px; height: 22px; accent-color: var(--kalam-emerald); margin-top: 2px;">
-              <div>
-                <strong>۲. بررسی پلمپ اصالت و عدم آثار بازشدگی</strong>
-                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">برچسب هولوگرام شرکتی و سلامت فیزیکی بدنه را با دقت بازبینی کنید.</div>
-              </div>
-            </label>
-
-            <label style="display: flex; gap: 0.85rem; align-items: flex-start; cursor: pointer; font-size: 0.95rem;">
-              <input type="checkbox" style="width: 22px; height: 22px; accent-color: var(--kalam-emerald); margin-top: 2px;">
-              <div>
-                <strong>۳. دریافت فاکتور معتبر با مهر فروشگاه و قید گارانتی</strong>
-                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">شماره تماس ثابت، نشانی پاساژ، شماره سریال و مدت گارانتی در فاکتور قید شده باشد.</div>
-              </div>
-            </label>
-
-            <label style="display: flex; gap: 0.85rem; align-items: flex-start; cursor: pointer; font-size: 0.95rem;">
-              <input type="checkbox" style="width: 22px; height: 22px; accent-color: var(--kalam-emerald); margin-top: 2px;">
-              <div>
-                <strong>۴. اعتبارسنجی درگاه پرداخت یا پایانه اقساطی (BNPL)</strong>
-                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">در صورت استفاده از اسنپ‌پی یا ترب‌پی، از اتصال ترمینال فروشگاه مطمئن شوید.</div>
-              </div>
-            </label>
-          </div>
-
-          <div style="margin-top: 1.5rem; background: rgba(0, 230, 118, 0.1); border: 1px solid var(--kalam-emerald); padding: 0.85rem 1.25rem; border-radius: var(--radius-md); font-size: 0.85rem; color: #4ade80;">
-            🛡️ تمام فروشگاه‌های حاضر در کَلَم دارای سابقه احراز هویت شده در ترب هستند.
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Tab 5: Whitepaper & Architecture Specs -->
-    <section class="tab-content-view" id="view-whitepaper" style="display: none;">
-      <div class="matte-card" style="padding: 2.25rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-          <div>
-            <h2 style="font-size: 1.65rem; font-weight: 900;">وایت‌پیپر و معماری الگوریتم‌های ۷گانه کَلَم</h2>
-            <p style="color: var(--text-secondary); font-size: 0.95rem; margin-top: 0.35rem;">
-              مستند کامل پژوهشی و تحلیل داده‌های ۲۲۵,۹۰۳ محصول و ۶,۴۷۶ فروشگاه فیزیکی تهران
-            </p>
-          </div>
-          <div style="display: flex; gap: 0.85rem;">
-            <a href="/WHITEPAPER_KALAM.pdf" download class="btn-primary-sm" style="text-decoration: none; display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem;">
-              📥 دانلود نسخه چاپی PDF (۲.۰۹ مگابایت)
-            </a>
-            <a href="/whitepaper_render.html" target="_blank" class="btn-outline-sm" style="text-decoration: none; padding: 0.75rem 1.25rem;">
-              🌐 نمایش کامل HTML
-            </a>
-          </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.35rem;">
-          <div class="matte-card" style="padding: 1.4rem;">
-            <span class="strategy-badge">الگوریتم ۱</span>
-            <h4 style="margin: 0.75rem 0 0.5rem 0; font-weight: 800;">IP-CRP Router</h4>
-            <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.7;">
-              موتور بهینه‌سازی سبد خرید چندقلمی در فضای سه‌بعدی پاساژها با قید پیمایش یک‌طرفه طبقات و کالای سنگین در ایستگاه آخر.
-            </p>
-          </div>
-
-          <div class="matte-card" style="padding: 1.4rem;">
-            <span class="strategy-badge">الگوریتم ۲</span>
-            <h4 style="margin: 0.75rem 0 0.5rem 0; font-weight: 800;">PACO Engine</h4>
-            <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.7;">
-              موتور مکمل نامتقارن و فضایی در پاساژ با فرمول ضربی ۴ فاکتوره و فیلتر خودکار برندهای رقیب و جانشین.
-            </p>
-          </div>
-
-          <div class="matte-card" style="padding: 1.4rem;">
-            <span class="strategy-badge">الگوریتم ۳</span>
-            <h4 style="margin: 0.75rem 0 0.5rem 0; font-weight: 800;">IMWP Parser</h4>
-            <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.7;">
-              ناوبری خرد درون پاساژ و استخراج واحد متنی، طبقات منفی و تولید راهنمای کلامی سه‌مرحله‌ای پاساژگردی.
-            </p>
-          </div>
-
-          <div class="matte-card" style="padding: 1.4rem;">
-            <span class="strategy-badge">الگوریتم ۴</span>
-            <h4 style="margin: 0.75rem 0 0.5rem 0; font-weight: 800;">CrediPay Matcher</h4>
-            <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.7;">
-              موتور تطبیق خرید اعتباری و اقساطی BNPL ایرانی (اسنپ‌پی، ترب‌پی، تارا، دیجی‌پی) و وزن‌دهی به پایانه فیزیکی.
-            </p>
-          </div>
-
-          <div class="matte-card" style="padding: 1.4rem;">
-            <span class="strategy-badge">الگوریتم ۵</span>
-            <h4 style="margin: 0.75rem 0 0.5rem 0; font-weight: 800;">INDP Engine</h4>
-            <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.7;">
-              غربال تعاملی نیاز مبهم خریدار با درخت تشخیصی ۲ مرحله‌ای در کمتر از ۳ ثانیه بدون اتلاف وقت در بازار.
-            </p>
-          </div>
-
-          <div class="matte-card" style="padding: 1.4rem;">
-            <span class="strategy-badge">الگوریتم ۶</span>
-            <h4 style="margin: 0.75rem 0 0.5rem 0; font-weight: 800;">SVDP Engine</h4>
-            <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.7;">
-              استعلام تلفنی و اعتبارسنجی موجودی پیش از حرکت با تنزیل زمانی قیمت و اسکریپت صوتی ۱۲ ثانیه‌ای تماس.
-            </p>
-          </div>
-
-          <div class="matte-card" style="padding: 1.4rem;">
-            <span class="strategy-badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border-color: rgba(239, 68, 68, 0.4);">الگوریتم ۷</span>
-            <h4 style="margin: 0.75rem 0 0.5rem 0; font-weight: 800;">TFRA Panic Fallback</h4>
-            <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.7;">
-              معماری جایگزینی اضطراری سه‌لایه (همین طبقه زیر ۲۰ متر، همان پاساژ، راسته مجاور) هنگام مواجهه با مغازه بسته.
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- Sticky Pulsing Emergency Panic Button (Bottom-Left) -->
-  <button class="panic-floating-btn" id="panic-floating-btn">
-    <span>🚨 مغازه بسته بود / ناموجوده! (Panic Button)</span>
+  <!-- دستیار گفتگو -->
+  <button type="button" class="assistant-fab" id="assistant-fab" aria-controls="assistant" aria-expanded="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4V5Z"/><path d="M8 10h8M8 13h5"/></svg>
+    <span>دستیار کَلَم</span>
   </button>
 
-  <!-- Panic Emergency Modal -->
-  <div class="modal-overlay" id="panic-modal">
-    <div class="modal-container">
-      <button class="modal-close-btn" onclick="app.closeModal('panic-modal')">✕</button>
-      <div style="display: flex; align-items: center; gap: 0.85rem; margin-bottom: 1.25rem;">
-        <span style="font-size: 2.25rem;">🚨</span>
-        <div>
-          <h3 style="color: #ef4444; font-size: 1.35rem; font-weight: 900;">دکمه نجات پاساژ: مغازه بسته یا کالا ناموجود است!</h3>
-          <p style="font-size: 0.9rem; color: var(--text-secondary);" id="panic-modal-subtitle">
-            در کمتر از ۱٫۵ ثانیه، فروشگاه‌های جایگزین در همان پاساژ و طبقه برای شما استخراج شد:
-          </p>
-        </div>
+  <aside class="assistant" id="assistant" aria-label="دستیار کَلَم" hidden>
+    <div class="assistant-head">
+      <img src="./logo.jpg" alt="" width="32" height="32">
+      <div class="assistant-title">
+        <strong>دستیار کَلَم</strong>
+        <span>پاسخ‌ها فقط از داده‌های فروشگاه‌های ترب</span>
       </div>
+      <button type="button" class="icon-btn" data-action="clear-chat" title="پاک کردن گفتگو" aria-label="پاک کردن گفتگو">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+      </button>
+      <button type="button" class="icon-btn" data-action="close-assistant" aria-label="بستن دستیار">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="assistant-body" id="chat-messages" aria-live="polite"></div>
+    <div class="assistant-prompts" id="chat-prompts"></div>
+    <form class="assistant-input" id="chat-form">
+      <input type="text" id="chat-input" placeholder="مثلاً: مغازه بسته بود، جایگزین می‌خوام" autocomplete="off" aria-label="پیام به دستیار">
+      <button type="submit" class="btn btn-primary" aria-label="ارسال">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12 4 4l3 8-3 8 16-8ZM7 12h6"/></svg>
+      </button>
+    </form>
+  </aside>
 
-      <div id="panic-fallbacks-list" style="margin-top: 1.25rem;">
-        <!-- Fallbacks rendered dynamically -->
+  <!-- مودال عمومی -->
+  <div class="modal" id="modal" hidden>
+    <div class="modal-backdrop" data-action="close-modal"></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-head">
+        <h2 id="modal-title"></h2>
+        <button type="button" class="icon-btn" data-action="close-modal" aria-label="بستن">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
       </div>
-
-      <div style="margin-top: 1.75rem; text-align: left;">
-        <button class="btn-primary-sm" onclick="app.closeModal('panic-modal')">متشکرم، مسیر جدید را دنبال می‌کنم</button>
-      </div>
+      <div class="modal-body" id="modal-body"></div>
     </div>
   </div>
 
-  <!-- Product Detail & PACO Complementary Modal -->
-  <div class="modal-overlay" id="product-modal">
-    <div class="modal-container">
-      <button class="modal-close-btn" onclick="app.closeModal('product-modal')">✕</button>
-      <div id="product-modal-content">
-        <!-- Rendered dynamically -->
-      </div>
-    </div>
-  </div>
-
-  <!-- INDP Ambiguous Need Modal -->
-  <div class="modal-overlay" id="indp-modal">
-    <div class="modal-container">
-      <button class="modal-close-btn" onclick="app.closeModal('indp-modal')">✕</button>
-      <div id="indp-modal-content">
-        <!-- Rendered dynamically -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast Container -->
-  <div class="toast-container" id="toast-container"></div>
+  <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
 
   <script src="./app.js"></script>
 </body>

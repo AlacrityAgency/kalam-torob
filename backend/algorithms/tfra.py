@@ -3,17 +3,42 @@
 نجات خریدار هنگام مراجعه به مغازه بسته یا مواجهه با اتمام موجودی در کمتر از ۱٫۵ ثانیه.
 """
 
+import math
+
+from .hours import hours_status
 from .imwp import parse_mall_address
+
+# سقف کاندیداهای بررسی‌شده؛ لایه‌بندی پس از خواندن همه انجام می‌شود تا مغازه‌های نزدیک اما گران‌تر حذف نشوند
+MAX_CANDIDATES = 500
+
+
+def _distance_km(lat1, lon1, lat2, lon2):
+    """فاصله هاورساین بین دو نقطه (کیلومتر)؛ اگر مختصات ناقص باشد None."""
+    if None in (lat1, lon1, lat2, lon2):
+        return None
+    r = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp, dl = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
+
+
+def _in_same_mall(base_parsed, base_hub, cand_parsed, cand_hub):
+    if base_parsed["mall_detected"] and cand_parsed["mall_detected"]:
+        return base_parsed["mall_name"] == cand_parsed["mall_name"]
+    # اگر نام پاساژ از آدرس درنیامد، فقط هم‌هاب بودن معتبر است (نه حضور کلمه «تهران» در آدرس)
+    return bool(base_hub) and base_hub == cand_hub
+
 
 def find_emergency_fallbacks(db_conn, product_id: str, failed_shop_id: str):
     """
     یافتن فوری مغازه‌های جایگزین در ۳ لایه:
-    لایه ۱: همان طبقه (فاصله زیر ۲۰ متر)
+    لایه ۱: همان طبقه همان پاساژ
     لایه ۲: طبقات دیگر همان مجتمع تجاری
-    لایه ۳: راسته مجاور در همان منطقه
+    لایه ۳: سایر راسته‌ها، به ترتیب نزدیکی جغرافیایی
     """
     cursor = db_conn.cursor()
-    
+
     # دریافت اطلاعات مغازه مبدأ
     cursor.execute("""
     SELECT shop_id, name, address, location_label, lat, lon
@@ -30,23 +55,30 @@ def find_emergency_fallbacks(db_conn, product_id: str, failed_shop_id: str):
     # جستجوی تمام مغازه‌های دیگر دارای این محصول با قیمت معتبر
     cursor.execute("""
     SELECT s.shop_id, s.name, s.address, s.location_label, s.payment_options, s.contacts,
-           o.price_toman, o.warranty, o.last_price_changed_at
+           o.price_toman, o.warranty, o.last_price_changed_at, s.lat, s.lon, s.weekly_hours
     FROM offers o
     JOIN shops s ON o.shop_id = s.shop_id
     WHERE o.product_id = ? AND s.shop_id != ? AND o.price_toman IS NOT NULL
+      AND o.is_copy = 0 AND o.price_suspect = 0
     ORDER BY o.price_toman ASC
-    LIMIT 25;
-    """, (product_id, failed_shop_id))
+    LIMIT ?;
+    """, (product_id, failed_shop_id, MAX_CANDIDATES))
     candidates = cursor.fetchall()
 
     layer1_same_floor = []
     layer2_same_mall = []
     layer3_same_hub = []
+    seen_shops = set()
 
     for c in candidates:
-        csid, cname, caddr, cloc, cpay, ccontacts, price, warranty, last_ch = c
+        csid, cname, caddr, cloc, cpay, ccontacts, price, warranty, last_ch, clat, clon, chours = c
+        # هر مغازه یک بار (ارزان‌ترین پیشنهادش)
+        if csid in seen_shops:
+            continue
+        seen_shops.add(csid)
+
         c_parsed = parse_mall_address(caddr, cloc)
-        c_floor = c_parsed["floor_level"]
+        distance = _distance_km(slat, slon, clat, clon)
 
         candidate_obj = {
             "shop_id": csid,
@@ -54,26 +86,40 @@ def find_emergency_fallbacks(db_conn, product_id: str, failed_shop_id: str):
             "address": caddr,
             "parsed_address": c_parsed,
             "price_toman": price,
-            "warranty": warranty or "گارانتی اصالت و سلامت فیزیکی",
+            "warranty": warranty if warranty and warranty != "null" else None,
             "last_price_changed_at": last_ch,
-            "payment_options": cpay
+            "payment_options": cpay,
+            "distance_km": round(distance, 2) if distance is not None else None,
+            "hours": hours_status(chours),
         }
 
-        # لایه ۱: همان هاب و دقیقاً همان طبقه
-        if (cloc == sloc or base_parsed["mall_name"] in caddr) and c_floor == base_floor:
+        same_mall = _in_same_mall(base_parsed, sloc, c_parsed, cloc)
+        same_floor = same_mall and base_parsed["floor_known"] and c_parsed["floor_known"] and c_parsed["floor_level"] == base_floor
+        if same_floor:
             candidate_obj["tier"] = 1
-            candidate_obj["tier_badge"] = "همین طبقه (زیر ۲۰ متر)"
+            candidate_obj["tier_badge"] = "همین طبقه"
             layer1_same_floor.append(candidate_obj)
-        # لایه ۲: همان هاب اما طبقات دیگر
-        elif (cloc == sloc or base_parsed["mall_name"] in caddr):
+        elif same_mall:
             candidate_obj["tier"] = 2
             candidate_obj["tier_badge"] = f"همین پاساژ ({c_parsed['floor_label']})"
             layer2_same_mall.append(candidate_obj)
-        # لایه ۳: هاب مجاور
         else:
             candidate_obj["tier"] = 3
-            candidate_obj["tier_badge"] = f"راسته {cloc}"
+            candidate_obj["tier_badge"] = f"راسته {cloc}" if cloc else "راسته دیگر"
             layer3_same_hub.append(candidate_obj)
+
+    # مغازه‌ای که الان بسته است جایگزین فوری نیست؛ در هر لایه آخر می‌آید.
+    # در لایه ۲ نزدیک‌ترین طبقه، در لایه ۳ نزدیک‌ترین مسافت اولویت دارد (قیمت معیار بعدی)
+    def closed(x):
+        return x["hours"]["state"] == "closed"
+
+    layer1_same_floor.sort(key=lambda x: (closed(x), x["price_toman"]))
+    layer2_same_mall.sort(key=lambda x: (
+        closed(x),
+        abs(x["parsed_address"]["floor_level"] - base_floor) if base_parsed["floor_known"] else 0,
+        x["price_toman"],
+    ))
+    layer3_same_hub.sort(key=lambda x: (closed(x), x["distance_km"] is None, x["distance_km"] or 0, x["price_toman"]))
 
     # ترکیب نتایج با اولویت لایه‌ها
     recommended_fallbacks = (layer1_same_floor[:2] + layer2_same_mall[:2] + layer3_same_hub[:2])[:4]
@@ -91,8 +137,10 @@ def find_emergency_fallbacks(db_conn, product_id: str, failed_shop_id: str):
         "layer3_count": len(layer3_same_hub),
         "recommended_fallbacks": recommended_fallbacks,
         "action_guide": (
-            "نیازی به ترک مرکز خرید نیست! مغازه‌های هم‌طبقه و هم‌راستا با همان رده قیمتی برای شما آماده مراجعه هستند."
+            "نیازی به ترک مرکز خرید نیست! مغازه‌های هم‌طبقه و هم‌پاساژ این کالا را دارند."
             if (layer1_same_floor or layer2_same_mall) else
-            "به نزدیک‌ترین فروشگاه در راسته مجاور هدایت می‌شوید."
+            "در این پاساژ جایگزینی نبود؛ نزدیک‌ترین فروشگاه‌ها در راسته‌های دیگر:"
+            if layer3_same_hub else
+            "فروشگاه دیگری این کالا را با قیمت ثبت‌شده ندارد."
         )
     }

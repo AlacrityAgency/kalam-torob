@@ -1,0 +1,19 @@
+# اجرای محلی با Docker:
+#   docker compose up --build
+# برای داده واقعی، zip دیتاست را کنار این فایل با نام dataset.zip بگذارید.
+services:
+  kalam:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      KALAM_DB_PATH: /data/torob.db
+      DATASET_ZIP_PATH: /seed/dataset.zip
+      # ANTHROPIC_API_KEY: ""   # اختیاری: درک پیام با Claude؛ بدون آن پارسر محلی کار می‌کند
+    volumes:
+      - kalam-data:/data
+      - ./dataset.zip:/seed/dataset.zip:ro
+    restart: unless-stopped
+
+volumes:
+  kalam-data:

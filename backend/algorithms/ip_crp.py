@@ -4,6 +4,7 @@
 """
 
 from collections import defaultdict
+from .hours import hours_status
 from .imwp import parse_mall_address
 
 # دسته‌های مشمول قید کالای سنگین
@@ -24,6 +25,8 @@ class InPersonCartRouter:
           - single_stop: تک‌فروشگاه (یک فاکتور بدون جابه‌جایی)
           - bargain: ارزان‌ترین قیمت ممکن در کل شهر
         """
+        # حذف شناسه‌های تکراری با حفظ ترتیب
+        product_ids = list(dict.fromkeys(product_ids or []))
         if not product_ids:
             return {"error": "سبد خرید خالی است."}
 
@@ -47,11 +50,13 @@ class InPersonCartRouter:
 
         # استخراج تمام آفرها و فروشگاه‌های دارای این کالاها
         cursor.execute(f"""
-        SELECT o.product_id, o.price_toman, o.last_price_changed_at, o.warranty,
-               s.shop_id, s.name, s.address, s.location_label, s.lat, s.lon, s.payment_options
+        SELECT o.product_id, o.price_toman, o.last_price_changed_at, o.warranty, o.offer_id,
+               s.shop_id, s.name, s.address, s.location_label, s.lat, s.lon, s.payment_options, s.weekly_hours
         FROM offers o
         JOIN shops s ON o.shop_id = s.shop_id
         WHERE o.product_id IN ({placeholders}) AND o.price_toman IS NOT NULL
+          -- آفرهای کپی/غیراصل و قیمت‌های پرت در مسیر خرید شرکت داده نمی‌شوند
+          AND o.is_copy = 0 AND o.price_suspect = 0
         ORDER BY o.price_toman ASC
         """, product_ids)
         
@@ -63,18 +68,22 @@ class InPersonCartRouter:
         shops_info = {}
 
         for off in offers:
-            pid, price, last_changed, warranty, sid, sname, addr, loc, lat, lon, pay_opts = off
+            pid, price, last_changed, warranty, offer_id, sid, sname, addr, loc, lat, lon, pay_opts, hours = off
             prod_offers[pid].append({
                 "shop_id": sid, "price": price, "warranty": warranty
             })
-            shop_inventory[sid][pid] = {
-                "price": price, "warranty": warranty, "last_changed": last_changed
-            }
+            # اگر مغازه چند پیشنهاد برای یک کالا دارد، ارزان‌ترین نگه داشته می‌شود
+            current = shop_inventory[sid].get(pid)
+            if current is None or price < current["price"]:
+                shop_inventory[sid][pid] = {
+                    "price": price, "warranty": warranty, "last_changed": last_changed, "offer_id": offer_id
+                }
             if sid not in shops_info:
                 shops_info[sid] = {
                     "shop_id": sid, "name": sname, "address": addr,
-                    "location_label": loc or "نامشخص", "lat": lat, "lon": lon,
-                    "payment_options": pay_opts
+                    "location_label": loc, "lat": lat, "lon": lon,
+                    "payment_options": pay_opts,
+                    "weekly_hours": hours,
                 }
 
         # ۱. تحلیل تک‌فروشگاه (Single-Stop)
@@ -87,7 +96,7 @@ class InPersonCartRouter:
                 single_stops.append({
                     "shop_id": sid,
                     "shop_name": s_info["name"],
-                    "hub": s_info["location_label"],
+                    "hub": s_info["location_label"] or "نامشخص",
                     "address": s_info["address"],
                     "parsed_address": parsed_addr,
                     "total_price": total_p,
@@ -95,18 +104,21 @@ class InPersonCartRouter:
                     "items": [
                         {
                             "product_id": p,
-                            "title": products[p]["title"],
+                            "offer_id": inv[p]["offer_id"],
+                            "title": self._title(products, p),
                             "price": inv[p]["price"]
                         } for p in product_ids
                     ]
                 })
-        single_stops.sort(key=lambda x: x["total_price"])
+        single_stops.sort(key=lambda x: (bool(preferred_hub) and x["hub"] != preferred_hub, x["total_price"]))
 
         # ۲. تحلیل هاب‌محور (Same-Hub / Mall Golden Path)
         # گروه‌بندی مغازه‌ها بر اساس location_label
         hubs = defaultdict(set)
         for sid, s_info in shops_info.items():
-            hubs[s_info["location_label"]].add(sid)
+            # مغازه‌های بدون هاب در یک «هاب نامشخص» ساختگی کنار هم قرار نمی‌گیرند
+            if s_info["location_label"]:
+                hubs[s_info["location_label"]].add(sid)
 
         hub_routes = []
         for h, sids in hubs.items():
@@ -129,7 +141,7 @@ class InPersonCartRouter:
 
             if hub_covered:
                 distinct_sids = list(set(s for s, pr in chosen_items_map.values()))
-                ordered_stops = self._sequence_stops(distinct_sids, chosen_items_map, shops_info, products)
+                ordered_stops = self._sequence_stops(distinct_sids, chosen_items_map, shops_info, products, shop_inventory)
                 
                 # تخمین پیاده‌روی کل در پاساژ
                 walking_meters = len(distinct_sids) * 45  # میانگین ۴۵ متر فاصله بین مغازه‌های پاساژ
@@ -144,8 +156,10 @@ class InPersonCartRouter:
                     "stops": ordered_stops
                 })
 
-        # مرتب‌سازی هاب‌ها بر اساس تعداد توقف کمتر و سپس قیمت کمتر
-        hub_routes.sort(key=lambda x: (x["stops_count"], x["total_price"]))
+        # مرتب‌سازی هاب‌ها: اول مرکز خرید انتخابی کاربر، بعد تعداد توقف کمتر و قیمت کمتر
+        hub_routes.sort(key=lambda x: (x["hub"] != preferred_hub, x["stops_count"], x["total_price"]))
+        for route in hub_routes:
+            route["is_preferred_hub"] = bool(preferred_hub) and route["hub"] == preferred_hub
 
         # ۳. تحلیل چندمرکزی شهر (Multi-Hub / City Coverage Fallback)
         city_chosen_map = {}
@@ -159,8 +173,8 @@ class InPersonCartRouter:
         multi_hub_route = None
         if city_chosen_map and len(city_chosen_map) == len(product_ids):
             distinct_sids = list(set(s for s, pr in city_chosen_map.values()))
-            ordered_stops = self._sequence_stops(distinct_sids, city_chosen_map, shops_info, products)
-            hubs_involved = list(set(shops_info[s]["location_label"] for s in distinct_sids))
+            ordered_stops = self._sequence_stops(distinct_sids, city_chosen_map, shops_info, products, shop_inventory)
+            hubs_involved = sorted(set(shops_info[s]["location_label"] or "نامشخص" for s in distinct_sids))
             hub_name_str = " و ".join(hubs_involved[:2]) + ("..." if len(hubs_involved) > 2 else "")
             multi_hub_route = {
                 "hub": f"راسته‌های {hub_name_str}",
@@ -198,6 +212,7 @@ class InPersonCartRouter:
                     "shop_id": single_stops[0]["shop_id"],
                     "shop_name": single_stops[0]["shop_name"],
                     "parsed_address": single_stops[0]["parsed_address"],
+                    "hours": hours_status(shops_info[single_stops[0]["shop_id"]]["weekly_hours"]),
                     "items": single_stops[0]["items"]
                 }]
             }
@@ -215,7 +230,11 @@ class InPersonCartRouter:
             "available_hubs": hub_routes[:5]
         }
 
-    def _sequence_stops(self, distinct_sids, chosen_items_map, shops_info, products):
+    @staticmethod
+    def _title(products, pid):
+        return products[pid]["title"] if pid in products else f"کالای {pid}"
+
+    def _sequence_stops(self, distinct_sids, chosen_items_map, shops_info, products, shop_inventory):
         """
         مرتب‌سازی توقف‌ها بر اساس پیمایش یک‌طرفه طبقات (Monotonic Floor Order)
         و قید کالای سنگین در ایستگاه آخر (Heavy-Item Last Constraint)
@@ -230,13 +249,15 @@ class InPersonCartRouter:
             has_heavy = False
             for p, (s, pr) in chosen_items_map.items():
                 if s == sid:
+                    is_heavy = products.get(p, {}).get("is_heavy", False)
                     items.append({
                         "product_id": p,
-                        "title": products[p]["title"],
+                        "offer_id": shop_inventory.get(sid, {}).get(p, {}).get("offer_id"),
+                        "title": self._title(products, p),
                         "price": pr,
-                        "is_heavy": products[p]["is_heavy"]
+                        "is_heavy": is_heavy
                     })
-                    if products[p]["is_heavy"]:
+                    if is_heavy:
                         has_heavy = True
 
             raw_stops.append({
@@ -245,14 +266,17 @@ class InPersonCartRouter:
                 "address": s_info["address"],
                 "parsed_address": parsed_addr,
                 "floor_level": parsed_addr["floor_level"],
+                "hub": s_info["location_label"] or "",
                 "payment_options": s_info["payment_options"],
                 "has_heavy_item": has_heavy,
+                "hours": hours_status(s_info["weekly_hours"]),
                 "items": items
             })
 
         # مرتب‌سازی صعودی یکنواخت طبقات: همکف (0) -> اول (1) -> دوم (2)...
-        # با حفظ قید: اگر مغازه‌ای کالای سنگین دارد، با اولویت به انتهای مسیر منتقل شود
-        raw_stops.sort(key=lambda s: (1 if s["has_heavy_item"] else 0, s["floor_level"]))
+        # با حفظ قید: اگر مغازه‌ای کالای سنگین دارد، با اولویت به انتهای مسیر منتقل شود.
+        # در مسیر چندهابی، توقف‌های هر هاب کنار هم می‌مانند تا بین راسته‌ها رفت‌وبرگشت نشود.
+        raw_stops.sort(key=lambda s: (1 if s["has_heavy_item"] else 0, s["hub"], s["floor_level"]))
 
         # شماره‌گذاری گام‌ها
         for idx, stop in enumerate(raw_stops, 1):
