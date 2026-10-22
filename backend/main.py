@@ -4,9 +4,10 @@ FastAPI Backend Application exposing all 7 in-person retail algorithms, FTS5 sea
 """
 
 import os
+import re
 import sqlite3
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from fastapi import FastAPI, Query, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -25,9 +26,13 @@ from .assistant import KalamAssistant
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "torob.db")
 
 def get_db():
+    # sqlite3.connect فایل خالی می‌سازد؛ بدون پایگاه داده به جای خطای «no such table» پیام روشن بده
+    if not os.path.exists(DB_PATH):
+        raise HTTPException(
+            status_code=503,
+            detail="پایگاه داده ساخته نشده است. ابتدا scripts/build_db.py را اجرا کنید.",
+        )
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    conn.execute("PRAGMA journal_mode = WAL;")
-    conn.execute("PRAGMA synchronous = NORMAL;")
     try:
         yield conn
     finally:
@@ -42,15 +47,19 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    # API بدون کوکی و احراز هویت است؛ ترکیب "*" با credentials ناامن و بی‌مورد است
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ----------------- Pydantic Models -----------------
+MAX_CART_ITEMS = 50
+MAX_SHOP_IDS = 200
+
 class CartRouteRequest(BaseModel):
-    product_ids: List[str]
-    preferred_hub: Optional[str] = "چارسو"
+    product_ids: List[str] = Field(..., max_length=MAX_CART_ITEMS)
+    preferred_hub: Optional[str] = None
     strategy: Optional[str] = "same_hub" # same_hub, single_stop, bargain
 
 class PanicRequest(BaseModel):
@@ -58,14 +67,14 @@ class PanicRequest(BaseModel):
     failed_shop_id: str
 
 class CreditFilterRequest(BaseModel):
-    shop_ids: Optional[List[str]] = None
+    shop_ids: Optional[List[str]] = Field(None, max_length=MAX_SHOP_IDS)
     required_provider: Optional[str] = None
     in_person_only: Optional[bool] = False
 
 class ChatRequest(BaseModel):
-    message: str
-    cart_product_ids: Optional[List[str]] = []
-    current_hub: Optional[str] = "چارسو"
+    message: str = Field(..., min_length=1, max_length=500)
+    cart_product_ids: Optional[List[str]] = Field(default_factory=list, max_length=MAX_CART_ITEMS)
+    current_hub: Optional[str] = None
     active_product_id: Optional[str] = None
     active_shop_id: Optional[str] = None
 
@@ -127,104 +136,102 @@ def get_commercial_hubs(conn: sqlite3.Connection = Depends(get_db)):
         })
     return {"hubs": hubs}
 
+PERSIAN_SYNONYMS = {
+    "لپتاپ": "لپ تاپ",
+    "لپ‌تاپ": "لپ تاپ",
+    "اسنپپی": "اسنپ پی",
+    "اسنپ‌پی": "اسنپ پی",
+    "تربپی": "ترب پی",
+    "ترب‌پی": "ترب پی",
+    "پاوربانک": "پاور بانک",
+    "پاور‌بانک": "پاور بانک",
+    "کتانی": "کتونی",
+}
+
+
+def normalize_query(q: str) -> str:
+    """یکسان‌سازی حروف عربی/فارسی و املای رایج کلمات مرکب"""
+    text = q.replace("ي", "ی").replace("ك", "ک").replace("\u200c", " ")
+    for k, v in PERSIAN_SYNONYMS.items():
+        text = text.replace(k.replace("\u200c", " "), v)
+    return text
+
+
+def search_tokens(q: str) -> List[str]:
+    return re.findall(r"[\w\u0600-\u06FF]+", normalize_query(q))[:6]
+
+
+SEARCH_SELECT = """
+    SELECT p.product_id, p.persian_title, p.category_name, p.brand_name, p.image_urls,
+           min(o.price_toman) AS min_price, max(o.price_toman) AS max_price,
+           count(DISTINCT o.shop_id) AS shop_count
+    FROM products p
+    JOIN offers o ON p.product_id = o.product_id AND o.price_toman IS NOT NULL
+    JOIN shops s ON o.shop_id = s.shop_id
+"""
+
+
 @app.get("/api/search")
 def search_products(
-    q: str = Query(..., min_length=1),
+    q: str = Query(..., min_length=1, max_length=120),
     hub: Optional[str] = None,
     category: Optional[str] = None,
-    limit: int = 25,
+    limit: int = Query(25, ge=1, le=100),
     conn: sqlite3.Connection = Depends(get_db)
 ):
     """
-    جستجوی متنی سریع در میان ۲۲۵,۹۰۳ محصول با امکان فیلتر بر اساس هاب بازار
+    جستجوی متنی سریع در میان محصولات با امکان فیلتر بر اساس هاب بازار و دسته
+    ترتیب نتایج همان ترتیب ارتباط (rank) موتور FTS5 است.
     """
     cursor = conn.cursor()
-    # نرمال‌سازی کلمات مرکب رایج زبان فارسی
-    import re
-    norm_q = q
-    PERSIAN_SYNONYMS = {
-        "لپتاپ": "لپ تاپ",
-        "لپ‌تاپ": "لپ تاپ",
-        "اسنپپی": "اسنپ پی",
-        "اسنپ‌پی": "اسنپ پی",
-        "تربپی": "ترب پی",
-        "ترب‌پی": "ترب پی",
-        "پاوربانک": "پاور بانک",
-        "پاور‌بانک": "پاور بانک",
-        "کتانی": "کتونی",
-        "هدفون": "هدفون هندزفری",
-    }
-    for k, v in PERSIAN_SYNONYMS.items():
-        norm_q = norm_q.replace(k, v)
+    tokens = search_tokens(q)
+    if not tokens:
+        return {"query": q, "total_found": 0, "products": []}
 
-    # پاکسازی امن عبارت جستجو برای موتور FTS5
-    clean_tokens = re.findall(r'[\w\u0600-\u06FF]+', norm_q)
-    fts_matched_ids = []
+    # ۱. FTS5 با ترتیب ارتباط؛ هر توکن به صورت پیشوندی و در کوتیشن (ایمن در برابر نحو FTS)
+    ranked_ids: List[str] = []
+    fts_query = " ".join(f'"{tok}"*' for tok in tokens)
+    try:
+        cursor.execute(
+            "SELECT product_id FROM products_fts WHERE products_fts MATCH ? ORDER BY rank LIMIT 400;",
+            (fts_query,),
+        )
+        ranked_ids = [row[0] for row in cursor.fetchall()]
+    except sqlite3.Error:
+        ranked_ids = []
 
-    if clean_tokens:
-        fts_query = " ".join([f'"{tok}"*' for tok in clean_tokens[:4]])
-        try:
-            cursor.execute("SELECT product_id FROM products_fts WHERE products_fts MATCH ? LIMIT 60;", (fts_query,))
-            fts_matched_ids = [row[0] for row in cursor.fetchall()]
-        except Exception:
-            fts_matched_ids = []
+    filters, params = [], []
+    if hub:
+        filters.append("s.location_label = ?")
+        params.append(hub)
+    if category:
+        filters.append("p.category_name = ?")
+        params.append(category)
 
-    if fts_matched_ids:
-        placeholders = ",".join(["?"] * len(fts_matched_ids))
-        if hub:
-            params = list(fts_matched_ids) + [hub, limit]
-            cursor.execute(f"""
-            SELECT p.product_id, p.persian_title, p.category_name, p.brand_name, p.image_urls,
-                   min(o.price_toman) as min_price, max(o.price_toman) as max_price, count(DISTINCT s.shop_id) as shop_count
-            FROM products p
-            JOIN offers o ON p.product_id = o.product_id
-            JOIN shops s ON o.shop_id = s.shop_id
-            WHERE p.product_id IN ({placeholders}) AND s.location_label = ?
-            GROUP BY p.product_id
-            ORDER BY shop_count DESC
-            LIMIT ?;
-            """, params)
-        else:
-            params = list(fts_matched_ids) + [limit]
-            cursor.execute(f"""
-            SELECT p.product_id, p.persian_title, p.category_name, p.brand_name, p.image_urls,
-                   min(o.price_toman) as min_price, max(o.price_toman) as max_price, count(o.offer_id) as shop_count
-            FROM products p
-            LEFT JOIN offers o ON p.product_id = o.product_id
-            WHERE p.product_id IN ({placeholders})
-            GROUP BY p.product_id
-            ORDER BY shop_count DESC
-            LIMIT ?;
-            """, params)
+    if ranked_ids:
+        placeholders = ",".join(["?"] * len(ranked_ids))
+        where = [f"p.product_id IN ({placeholders})"] + filters
+        cursor.execute(
+            SEARCH_SELECT + f" WHERE {' AND '.join(where)} GROUP BY p.product_id;",
+            ranked_ids + params,
+        )
+        order = {pid: i for i, pid in enumerate(ranked_ids)}
+        rows = sorted(cursor.fetchall(), key=lambda r: order.get(r[0], len(order)))[:limit]
     else:
-        query_str = f"%{q.strip()}%"
-        if hub:
-            cursor.execute("""
-            SELECT p.product_id, p.persian_title, p.category_name, p.brand_name, p.image_urls,
-                   min(o.price_toman) as min_price, max(o.price_toman) as max_price, count(DISTINCT s.shop_id) as shop_count
-            FROM products p
-            JOIN offers o ON p.product_id = o.product_id
-            JOIN shops s ON o.shop_id = s.shop_id
-            WHERE (p.persian_title LIKE ? OR p.category_name LIKE ? OR p.brand_name LIKE ?)
-              AND s.location_label = ?
-            GROUP BY p.product_id
-            ORDER BY shop_count DESC
-            LIMIT ?;
-            """, (query_str, query_str, query_str, hub, limit))
-        else:
-            cursor.execute("""
-            SELECT p.product_id, p.persian_title, p.category_name, p.brand_name, p.image_urls,
-                   min(o.price_toman) as min_price, max(o.price_toman) as max_price, count(o.offer_id) as shop_count
-            FROM products p
-            JOIN offers o ON p.product_id = o.product_id
-            WHERE p.persian_title LIKE ? OR p.category_name LIKE ? OR p.brand_name LIKE ?
-            GROUP BY p.product_id
-            ORDER BY shop_count DESC
-            LIMIT ?;
-            """, (query_str, query_str, query_str, limit))
+        # ۲. جایگزین LIKE: همه توکن‌ها باید در عنوان، دسته یا برند باشند
+        token_where = []
+        for tok in tokens:
+            token_where.append("(p.persian_title LIKE ? OR p.category_name LIKE ? OR p.brand_name LIKE ?)")
+        like_params = [f"%{tok}%" for tok in tokens for _ in range(3)]
+        cursor.execute(
+            SEARCH_SELECT + f" WHERE {' AND '.join(token_where + filters)}"
+            " GROUP BY p.product_id ORDER BY shop_count DESC LIMIT ?;",
+            like_params + params + [limit],
+        )
+        rows = cursor.fetchall()
 
     results = []
-    for r in cursor.fetchall():
+    for r in rows:
         results.append({
             "product_id": r[0],
             "persian_title": r[1],
@@ -246,7 +253,7 @@ def get_suggested_products(conn: sqlite3.Connection = Depends(get_db)):
     cursor = conn.cursor()
     cursor.execute("""
     SELECT p.product_id, p.persian_title, p.category_name, p.brand_name, p.image_urls,
-           min(o.price_toman) as min_price, count(o.offer_id) as shop_count
+           min(o.price_toman) as min_price, count(DISTINCT o.shop_id) as shop_count
     FROM products p
     JOIN offers o ON p.product_id = o.product_id
     WHERE o.price_toman > 200000
@@ -284,7 +291,7 @@ def get_product_details(product_id: str, conn: sqlite3.Connection = Depends(get_
 
     cursor.execute("""
     SELECT o.offer_id, o.price_toman, o.last_price_changed_at, o.warranty,
-           s.shop_id, s.name, s.address, s.location_label, s.payment_options, s.contacts
+           s.shop_id, s.name, s.address, s.location_label, s.payment_options, s.contacts, s.weekly_hours
     FROM offers o
     JOIN shops s ON o.shop_id = s.shop_id
     WHERE o.product_id = ? AND o.price_toman IS NOT NULL
@@ -294,10 +301,10 @@ def get_product_details(product_id: str, conn: sqlite3.Connection = Depends(get_
     offers_list = []
     prices = []
     for row in cursor.fetchall():
-        off_id, price, last_ch, warranty, sid, sname, addr, loc, pay_opts, contacts = row
+        off_id, price, last_ch, warranty, sid, sname, addr, loc, pay_opts, contacts, hours = row
         prices.append(price)
         parsed_addr = parse_mall_address(addr, loc)
-        stock_info = compute_stock_certainty({"price_toman": price, "last_price_changed_at": last_ch}, {})
+        stock_info = compute_stock_certainty({"price_toman": price, "last_price_changed_at": last_ch}, {"weekly_hours": hours})
         dossier = generate_inquiry_dossier(prod[1], price, sname, contacts)
         credit_info = analyze_payment_options(pay_opts)
 
@@ -305,7 +312,7 @@ def get_product_details(product_id: str, conn: sqlite3.Connection = Depends(get_
             "offer_id": off_id,
             "price_toman": price,
             "last_price_changed_at": last_ch,
-            "warranty": warranty or "گارانتی سلامت و اصالت فیزیکی",
+            "warranty": warranty if warranty and warranty != "null" else None,
             "shop": {
                 "shop_id": sid,
                 "name": sname,
@@ -383,20 +390,27 @@ def get_complementary_items(
         if s_row:
             base_shop = {"shop_id": s_row[0], "name": s_row[1], "address": s_row[2], "location_label": s_row[3]}
 
-    # جستجوی قوانین مکمل برای دسته محصول
+    # جستجوی قوانین مکمل برای دسته محصول (dep_score هر قانون در امتیاز استفاده می‌شود)
     cursor.execute("""
     SELECT target_category, dep_score
     FROM complementary_rules
     WHERE source_category = ?;
     """, (base_product["category_name"],))
-    rules = cursor.fetchall()
+    dep_by_category = {r[0]: r[1] for r in cursor.fetchall()}
 
-    if not rules:
-        # قوانین مکمل عمومی
-        comp_categories = ["لوازم جانبی گوشی", "کابل و شارژر", "کیف و کاور گوشی", "محافظ صفحه نمایش"]
-    else:
-        comp_categories = [r[0] for r in rules]
+    if not dep_by_category:
+        # قوانین مکمل عمومی (نام دسته‌ها مطابق دیتاست ترب)
+        dep_by_category = {
+            "کیف و کاور گوشی": 0.65,
+            "محافظ صفحه نمایش گوشی و تبلت": 0.65,
+            "شارژر تبلت و موبایل": 0.65,
+            "هدفون، هدست و هندزفری": 0.30,
+        }
+    dep_by_category.pop(base_product["category_name"], None)
+    if not dep_by_category:
+        return {"base_product": base_product, "complementary_count": 0, "recommendations": []}
 
+    comp_categories = list(dep_by_category)
     placeholders = ",".join(["?"] * len(comp_categories))
     cursor.execute(f"""
     SELECT p.product_id, p.persian_title, p.category_name, p.brand_name, o.price_toman,
@@ -406,13 +420,12 @@ def get_complementary_items(
     JOIN shops s ON o.shop_id = s.shop_id
     WHERE p.category_name IN ({placeholders}) AND o.price_toman IS NOT NULL
     ORDER BY o.price_toman ASC
-    LIMIT 30;
+    LIMIT 400;
     """, comp_categories)
 
-    candidates = cursor.fetchall()
-    scored_items = []
-
-    for c in candidates:
+    # برای هر کالای مکمل فقط بهترین پیشنهاد (بیشترین امتیاز) نگه داشته می‌شود
+    best_by_product = {}
+    for c in cursor.fetchall():
         cand_dict = {
             "product_id": c[0],
             "title": c[1],
@@ -424,15 +437,21 @@ def get_complementary_items(
             "shop_name": c[7],
             "address": c[8],
             "location_label": c[9],
-            "dep_score": 0.85
+            "dep_score": dep_by_category.get(c[2]),
         }
-        score, reason = calculate_paco_score(base_product, base_shop, cand_dict)
-        if score > 0:
-            cand_dict["paco_score"] = round(score, 3)
-            cand_dict["parsed_address"] = parse_mall_address(cand_dict["address"], cand_dict["location_label"])
-            scored_items.append(cand_dict)
+        score, details = calculate_paco_score(base_product, base_shop, cand_dict)
+        if score <= 0:
+            continue
+        current = best_by_product.get(cand_dict["product_id"])
+        if current and current["paco_score"] >= score:
+            continue
+        cand_dict["paco_score"] = score
+        cand_dict["location_description"] = details["location_description"]
+        cand_dict["freshness_badge"] = details["freshness_badge"]
+        cand_dict["parsed_address"] = parse_mall_address(cand_dict["address"], cand_dict["location_label"])
+        best_by_product[cand_dict["product_id"]] = cand_dict
 
-    scored_items.sort(key=lambda x: x["paco_score"], reverse=True)
+    scored_items = sorted(best_by_product.values(), key=lambda x: x["paco_score"], reverse=True)
     return {
         "base_product": base_product,
         "complementary_count": len(scored_items),
@@ -475,7 +494,11 @@ def filter_credit_shops(req: CreditFilterRequest, conn: sqlite3.Connection = Dep
         placeholders = ",".join(["?"] * len(req.shop_ids))
         cursor.execute(f"SELECT shop_id, name, address, location_label, payment_options FROM shops WHERE shop_id IN ({placeholders});", req.shop_ids)
     else:
-        cursor.execute("SELECT shop_id, name, address, location_label, payment_options FROM shops WHERE payment_options LIKE '%in_person%' OR payment_options LIKE '%snapp_pay%' LIMIT 30;")
+        cursor.execute("""
+        SELECT shop_id, name, address, location_label, payment_options FROM shops
+        WHERE payment_options IS NOT NULL AND payment_options NOT IN ('', 'null', '[]')
+        LIMIT 500;
+        """)
     
     shops = []
     for r in cursor.fetchall():
@@ -484,13 +507,13 @@ def filter_credit_shops(req: CreditFilterRequest, conn: sqlite3.Connection = Dep
         })
 
     ranked = filter_and_rank_by_credit(shops, req.required_provider, req.in_person_only)
-    return {"total": len(ranked), "shops": ranked}
+    return {"total": len(ranked), "shops": ranked[:50]}
 
 @app.get("/api/inquiry/dossier")
 def get_inquiry_dossier(
-    product_title: str,
-    price_toman: int,
-    shop_name: str,
+    product_title: str = Query(..., max_length=300),
+    price_toman: Optional[int] = Query(None, ge=0),
+    shop_name: str = Query(..., max_length=200),
     shop_id: Optional[str] = None,
     conn: sqlite3.Connection = Depends(get_db)
 ):

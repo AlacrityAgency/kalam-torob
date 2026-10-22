@@ -10,9 +10,9 @@ import markdown
 
 WORKSPACE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MD_PATH = os.path.join(WORKSPACE, "WHITEPAPER.md")
-LOGO_PATH = os.path.join(WORKSPACE, "kalam_logo.jpg")
-HTML_OUT = os.path.join(WORKSPACE, "whitepaper_render.html")
-PDF_OUT = os.path.join(WORKSPACE, "WHITEPAPER_KALAM.pdf")
+LOGO_PATH = os.path.join(WORKSPACE, "public", "logo.jpg")
+HTML_OUT = os.path.join(WORKSPACE, "public", "whitepaper_render.html")
+PDF_OUT = os.path.join(WORKSPACE, "public", "WHITEPAPER_KALAM.pdf")
 
 def read_file(path):
     with open(path, "r", encoding="utf-8") as f:

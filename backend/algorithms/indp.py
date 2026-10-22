@@ -3,6 +3,8 @@
 پاسخ به چالش کاربر سردرگم (مثال کفش کتونی منتور هکاتون) با درخت تشخیصی ۲ مرحله‌ای بدون هدررفت توکن.
 """
 
+from .textutil import has_word
+
 DIAGNOSTIC_TREES = {
     "shoes": {
         "keywords": ["کتونی", "کفش", "اسنیکر", "پیاده روی", "رانینگ"],
@@ -72,14 +74,19 @@ DIAGNOSTIC_TREES = {
 def detect_ambiguous_intent(user_query: str):
     """
     بررسی اینکه آیا کاربر نیاز کلی و بدون مدل مشخص دارد؟
+    کلیدواژه‌ها به صورت کلمه کامل تطبیق داده می‌شوند و درختی که بیشترین کلیدواژه را دارد انتخاب می‌شود
+    (مثلاً «دوربین گوشی» به گوشی می‌رود نه دوربین مداربسته).
     """
-    query = user_query.lower()
+    query = (user_query or "").lower()
+    best_key, best_hits = None, 0
     for cat_key, tree in DIAGNOSTIC_TREES.items():
-        if any(kw in query for kw in tree["keywords"]):
-            # اگر کاربر هنوز مدل مشخصی نگفته باشد
-            return {
-                "needs_decoupling": True,
-                "category_key": cat_key,
-                "tree": tree
-            }
-    return {"needs_decoupling": False}
+        hits = sum(1 for kw in tree["keywords"] if has_word(query, kw))
+        if hits > best_hits:
+            best_key, best_hits = cat_key, hits
+    if best_key is None:
+        return {"needs_decoupling": False}
+    return {
+        "needs_decoupling": True,
+        "category_key": best_key,
+        "tree": DIAGNOSTIC_TREES[best_key]
+    }

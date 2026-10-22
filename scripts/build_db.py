@@ -18,6 +18,22 @@ WORKSPACE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATASET_DIR = os.path.join(WORKSPACE, "dataset")
 DB_PATH = os.path.join(WORKSPACE, "torob.db")
 
+def nz(value):
+    """دیتاست مقادیر خالی را با رشته null می‌نویسد؛ در پایگاه داده NULL واقعی ذخیره می‌شود."""
+    if value is None:
+        return None
+    value = value.strip()
+    return None if value in ("", "null") else value
+
+
+def to_float(value):
+    value = nz(value)
+    try:
+        return float(value) if value is not None else None
+    except ValueError:
+        return None
+
+
 def init_db():
     if os.path.exists(DB_PATH):
         print(f"Removing existing {DB_PATH}...")
@@ -114,21 +130,19 @@ def populate_shops():
     with open(csv_path, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for r in reader:
-            lat = float(r["lat"]) if r["lat"] and r["lat"] != "null" else None
-            lon = float(r["lon"]) if r["lon"] and r["lon"] != "null" else None
             fast_del = 1 if r.get("supports_fast_delivery") == "true" else 0
             rows.append((
                 r["shop_id"],
-                r["name"],
-                r["address"],
-                r["location_label"],
-                lat,
-                lon,
-                r["payment_options"],
-                r["contacts"],
-                r["weekly_hours"],
-                r.get("instagram"),
-                r.get("website_url"),
+                nz(r["name"]),
+                nz(r["address"]),
+                nz(r["location_label"]),
+                to_float(r["lat"]),
+                to_float(r["lon"]),
+                nz(r["payment_options"]),
+                nz(r["contacts"]),
+                nz(r["weekly_hours"]),
+                nz(r.get("instagram")),
+                nz(r.get("website_url")),
                 fast_del
             ))
             
@@ -154,18 +168,18 @@ def populate_products():
         reader = csv.DictReader(f)
         for r in reader:
             pid = r["product_id"]
-            title = r["persian_title"]
-            cat = r["category_name"]
-            brand = r["brand_name"]
-            model = r["model"]
+            title = nz(r["persian_title"])
+            cat = nz(r["category_name"])
+            brand = nz(r["brand_name"])
+            model = nz(r["model"])
             rows.append((
                 pid,
                 title,
                 cat,
                 brand,
                 model,
-                r["specs"],
-                r["image_urls"]
+                nz(r["specs"]),
+                nz(r["image_urls"])
             ))
             fts_rows.append((
                 pid,
@@ -202,20 +216,20 @@ def populate_offers():
         reader = csv.DictReader(f)
         for r in reader:
             price = None
-            if r["price_toman"] and r["price_toman"] != "null":
+            if nz(r["price_toman"]) is not None:
                 try:
-                    price = int(r["price_toman"])
-                except:
+                    price = int(float(r["price_toman"]))
+                except ValueError:
                     price = None
             rows.append((
                 r["offer_id"],
                 r["product_id"],
                 r["shop_id"],
                 price,
-                r["last_price_changed_at"],
-                r.get("warranty"),
-                r.get("description"),
-                r.get("seller_title")
+                nz(r["last_price_changed_at"]),
+                nz(r.get("warranty")),
+                nz(r.get("description")),
+                nz(r.get("seller_title"))
             ))
 
     cursor.executemany("""

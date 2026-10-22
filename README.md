@@ -7,7 +7,7 @@
 
   <p>
     <a href="#-الگوریتم‌های-۷گانه-کلم"><img src="https://img.shields.io/badge/Algorithms-7%20Core%20Engines-22c55e?style=for-the-badge" alt="Algorithms" /></a>
-    <a href="#-معماری-طراحی-precision-matte-studio"><img src="https://img.shields.io/badge/Design-Matte%20Studio-0d1424?style=for-the-badge&logo=material-design&logoColor=white" alt="Matte Studio" /></a>
+    <a href="#-طراحی-رابط-کاربری-هم‌خانواده-با-ترب"><img src="https://img.shields.io/badge/Design-Torob%20Style-d73948?style=for-the-badge" alt="Torob Style" /></a>
     <a href="#-راه‌اندازی-سریع-quick-start"><img src="https://img.shields.io/badge/FastAPI-v0.100+-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" /></a>
     <a href="public/WHITEPAPER_KALAM.pdf"><img src="https://img.shields.io/badge/Whitepaper-PDF%20Download-ef4444?style=for-the-badge&logo=adobe-acrobat-reader&logoColor=white" alt="Whitepaper" /></a>
   </p>
@@ -46,14 +46,16 @@ graph TD
 
 ---
 
-## 🎨 معماری طراحی: Precision Matte Studio
+## 🎨 طراحی رابط کاربری: هم‌خانواده با ترب
 
-رابط کاربری کَلَم پس از تحقیقات عمیق R&D بر مبنای متدولوژی **Linear / Apple Matte Studio** بازطراحی شده است تا حداکثر کارایی و خوانایی را در محیط‌های پرنور پاساژها فراهم کند:
+رابط کاربری کَلَم با زبان بصری ترب طراحی شده تا برای کاربر ترب آشنا باشد:
 
-- **رنگ‌های مات و مهندسی:** پس‌زمینه گرافیتی زغالی عمیق (`#080C14` و `#0d1424`) با خطوط مرزی دقیق ۱ پیکسلی (`#1e2a44`).
-- **هویت سبز کلمی:** رنگ سبز طبیعی (`#22C55E` و `#16A34A`) برای تأیید اعتبار و شاخص‌های زنده.
-- **تایپوگرافی استاندارد فارسی:** استفاده از فونت وزیرمتن (Vazirmatn) با اعداد صددرصد فارسی.
-- **حذف گلس‌مورفیسم و نئون:** عدم انعکاس نور زیر تابش لامپ‌های بازار و مصرف بهینه باتری گوشی هوشمند.
+- **ظاهر سفید و تمیز:** پس‌زمینه سفید و خاکستری روشن (`#f5f5f5`)، خطوط مرزی ظریف (`#e5e5e5`) و رنگ قرمز برند (`#d73948`).
+- **صفحه خانه مثل ترب:** لوگو و جعبه جستجوی بزرگ در مرکز صفحه، جستجوهای پرطرفدار و شبکه کالاها.
+- **کارت کالا:** تصویر، عنوان دوخطی، «از … تومان» و «در N فروشگاه حضوری».
+- **صفحه کالا:** لیست فروشگاه‌های حضوری با پاساژ، طبقه و واحد، تازگی قیمت، اقساط حضوری و دکمه‌های مسیر، استعلام و «بسته بود؟».
+- **تایپوگرافی فارسی:** فونت وزیرمتن (Vazirmatn) که داخل پروژه قرار دارد و بدون اینترنت هم کار می‌کند.
+- **واکنش‌گرا:** طراحی برای موبایل (۳۶۰ پیکسل) تا دسکتاپ، بدون اسکرول افقی.
 
 ---
 
@@ -64,7 +66,7 @@ graph TD
 
 ### ۱. کلون مخزن
 ```bash
-git clone https://github.com/odimmraptor-collab/kalam-torob.git
+git clone https://github.com/AlacrityAgency/kalam-torob.git
 cd kalam-torob
 ```
 
@@ -94,6 +96,11 @@ python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
 سپس مرورگر خود را باز کرده و به آدرس زیر بروید:
 👉 **`http://127.0.0.1:8000/`**
 
+### ۵. اجرای تست‌ها
+```bash
+python -m unittest discover -s tests
+```
+
 ---
 
 ## 📂 ساختار فایل‌های پروژه
@@ -108,19 +115,23 @@ kalam-torob/
 │   │   ├── credipay.py      # ماژول خریدهای اقساطی BNPL
 │   │   ├── indp.py          # درخت غربالگری نیاز مبهم
 │   │   ├── svdp.py          # اسکریپت استعلام ۱۲ ثانیه‌ای
-│   │   └── tfra.py          # دکمه نجات پنیک مغازه بسته
+│   │   ├── tfra.py          # دکمه نجات پنیک مغازه بسته
+│   │   └── textutil.py      # ارقام فارسی، تطبیق کلمه کامل و سن تاریخ‌ها
 │   ├── assistant.py         # مغز کوپایلوت و چت‌بات خریدار
 │   └── main.py              # اِندپوینت‌های FastAPI و سرو فایل‌های استاتیک
 ├── public/
 │   ├── app.css              # استایل‌شیت تم مات استودیویی کلم
 │   ├── app.js               # کنترلر تعاملی فرانت‌اند
 │   ├── index.html           # سند تک‌صفحه‌ای با ویجت ۴ لایه کلم
+│   ├── fonts/               # فونت وزیرمتن (مجوز OFL)
 │   ├── logo.jpg             # لوگوی اختصاصی کلم ترب
 │   ├── WHITEPAPER_KALAM.pdf # وایت‌پیپر رسمی پروژه
 │   └── whitepaper_render.html
 ├── scripts/
 │   ├── build_db.py          # اسکریپت بارگذاری سریع SQLite با FTS5
+│   ├── generate_sample_dataset.py # دیتاست نمونه (ساختگی) برای اجرای محلی
 │   └── generate_pdf.py      # رندر نسخه چاپی PDF وایت‌پیپر
+├── tests/                   # تست‌های واحد الگوریتم‌ها و API
 ├── WHITEPAPER.md            # متن کامل وایت‌پیپر و اثبات‌های ریاضی
 ├── requirements.txt         # وابستگی‌های پایتون
 └── README.md

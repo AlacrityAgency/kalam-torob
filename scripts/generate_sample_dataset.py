@@ -131,7 +131,14 @@ CATEGORIES = {
 SHOP_PREFIXES = ["فروشگاه", "موبایل", "دیجیتال", "گالری", "بازرگانی", "تجهیزات", "پخش"]
 SHOP_NAMES = ["آرین", "پارسیان", "نوین", "ستاره", "کیان", "مهرگان", "آوا", "سپهر", "رایان", "امید",
               "پرشین", "تک", "آسمان", "دانیال", "ماهان", "کوثر", "نگین", "البرز", "صدرا", "آریا"]
-FLOORS = [("زیرهمکف", 1), ("همکف", 4), ("اول", 3), ("دوم", 2), ("سوم", 1)]
+# هر طبقه با چند شکل نوشتاری رایج در آدرس‌ها (کلمه، رقم فارسی، منفی) تا پارسر IMWP محک بخورد
+FLOORS = [
+    (["زیرهمکف", "منفی یک", "-1"], 1),
+    (["همکف"], 4),
+    (["اول", "۱", "یکم"], 3),
+    (["دوم", "۲"], 2),
+    (["سوم", "3"], 1),
+]
 PROVIDERS = ["snapp_pay", "torob_pay", "tara", "digi_pay"]
 WARRANTIES = ["گارانتی ۱۸ ماهه شرکتی", "گارانتی ۱۲ ماهه", "گارانتی اصالت و سلامت فیزیکی", None]
 
@@ -141,9 +148,9 @@ def fa(n):
 
 
 def weighted_floor():
-    words = [w for w, _ in FLOORS]
+    forms = [f for f, _ in FLOORS]
     weights = [c for _, c in FLOORS]
-    return random.choices(words, weights=weights)[0]
+    return random.choice(random.choices(forms, weights=weights)[0])
 
 
 def build_shops():
@@ -156,7 +163,8 @@ def build_shops():
             mall = random.choice(info["malls"])
             name = f"{random.choice(SHOP_PREFIXES)} {random.choice(SHOP_NAMES)}"
             unit = random.randint(1, 340)
-            address = f"تهران، {info['street']}، {mall}، طبقه {weighted_floor()}، واحد {fa(unit)}"
+            unit_part = random.choice([f"، واحد {fa(unit)}", f"، پلاک {unit}", f" واحد {fa(unit)}", ""])
+            address = f"تهران، {info['street']}، {mall}، طبقه {weighted_floor()}{unit_part}"
             payment = []
             for p in random.sample(PROVIDERS, k=random.randint(0, 2)):
                 payment.append({"provider_name": p, "channel": random.choice(["in_person", "in_person", "online"])})

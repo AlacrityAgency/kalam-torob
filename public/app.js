@@ -1037,7 +1037,7 @@ class KalamApp {
       const data = await postJSON("/api/chat", {
         message: text,
         cart_product_ids: this.cart.map((c) => c.id),
-        current_hub: this.hub || "تهران",
+        current_hub: this.hub,
         active_product_id: this.activeProductId,
         active_shop_id: this.activeShopId,
       });
