@@ -76,10 +76,11 @@ pip install -r requirements.txt
 ```
 
 ### ۳. ساخت پایگاه داده
-اگر فایل‌های CSV دیتاست ترب در پوشه `dataset/` قرار دارد:
+مسیر فایل zip دیتاست ترب را بدهید (CSVها خودکار در `dataset/` استخراج می‌شوند):
 ```bash
-python scripts/build_db.py
+python scripts/build_db.py path/to/starcoach-dataset-v16-cap300-csv.zip
 ```
+اگر CSVها از قبل در پوشه `dataset/` هستند، همان `python scripts/build_db.py` کافی است.
 
 اگر دیتاست واقعی را ندارید، برای اجرای محلی یک دیتاست **نمونه و ساختگی** با همان ساختار بسازید (نام مغازه‌ها، قیمت‌ها و شماره‌ها واقعی نیستند):
 ```bash
@@ -95,6 +96,13 @@ python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
 
 سپس مرورگر خود را باز کرده و به آدرس زیر بروید:
 👉 **`http://127.0.0.1:8000/`**
+
+### اجرای یک‌مرحله‌ای در ویندوز
+نصب وابستگی‌ها، ساخت پایگاه داده از zip، اجرای سرور و باز کردن مرورگر:
+```bat
+run_windows.bat "C:\Users\<you>\Downloads\starcoach-dataset-v16-cap300-csv.zip"
+```
+دفعه‌های بعد فقط `run_windows.bat` (بدون مسیر zip). اگر سرور در حال اجراست، قبل از ساخت دوباره پایگاه داده آن را ببندید.
 
 ### ۵. اجرای تست‌ها
 ```bash

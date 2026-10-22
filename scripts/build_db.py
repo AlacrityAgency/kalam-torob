@@ -12,11 +12,45 @@ import csv
 import json
 import os
 import sqlite3
+import sys
 import time
+import zipfile
 
 WORKSPACE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATASET_DIR = os.path.join(WORKSPACE, "dataset")
 DB_PATH = os.path.join(WORKSPACE, "torob.db")
+
+# ستون‌های JSON (مثل specs) می‌توانند از سقف پیش‌فرض ۱۳۱ هزار کاراکتر ماژول csv بزرگ‌تر باشند.
+# عدد ثابت به جای sys.maxsize، چون در ویندوز sys.maxsize از long زبان C بزرگ‌تر است.
+csv.field_size_limit(2**31 - 1)
+
+REQUIRED_FILES = ("shops.csv", "products.csv", "offers.csv")
+
+
+def extract_dataset_zip(zip_path):
+    """استخراج shops/products/offers.csv از فایل zip دیتاست (در هر پوشه‌ای از zip) به پوشه dataset/"""
+    os.makedirs(DATASET_DIR, exist_ok=True)
+    with zipfile.ZipFile(zip_path) as zf:
+        members = {os.path.basename(m): m for m in zf.namelist() if not m.endswith("/")}
+        missing = [name for name in REQUIRED_FILES if name not in members]
+        if missing:
+            sys.exit(f"این فایل‌ها در zip پیدا نشدند: {', '.join(missing)}")
+        for name in REQUIRED_FILES:
+            print(f"Extracting {members[name]} -> dataset/{name}")
+            with zf.open(members[name]) as src, open(os.path.join(DATASET_DIR, name), "wb") as dst:
+                while chunk := src.read(1024 * 1024):
+                    dst.write(chunk)
+
+
+def check_dataset_files():
+    missing = [n for n in REQUIRED_FILES if not os.path.exists(os.path.join(DATASET_DIR, n))]
+    if missing:
+        sys.exit(
+            f"فایل‌های {', '.join(missing)} در پوشه dataset/ نیستند.\n"
+            "مسیر zip دیتاست را بدهید:  python scripts/build_db.py path/to/dataset.zip\n"
+            "یا برای داده نمونه:        python scripts/generate_sample_dataset.py"
+        )
+
 
 def nz(value):
     """دیتاست مقادیر خالی را با رشته null می‌نویسد؛ در پایگاه داده NULL واقعی ذخیره می‌شود."""
@@ -127,7 +161,7 @@ def populate_shops():
     print(f"Loading {csv_path}...")
     
     rows = []
-    with open(csv_path, "r", encoding="utf-8") as f:
+    with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         for r in reader:
             fast_del = 1 if r.get("supports_fast_delivery") == "true" else 0
@@ -164,7 +198,7 @@ def populate_products():
 
     rows = []
     fts_rows = []
-    with open(csv_path, "r", encoding="utf-8") as f:
+    with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         for r in reader:
             pid = r["product_id"]
@@ -212,7 +246,7 @@ def populate_offers():
     print(f"Loading {csv_path}...")
 
     rows = []
-    with open(csv_path, "r", encoding="utf-8") as f:
+    with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         for r in reader:
             price = None
@@ -325,6 +359,9 @@ def verify_db():
 
 if __name__ == "__main__":
     t_start = time.time()
+    if len(sys.argv) > 1:
+        extract_dataset_zip(sys.argv[1])
+    check_dataset_files()
     init_db()
     populate_shops()
     populate_products()
