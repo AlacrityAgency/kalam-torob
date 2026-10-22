@@ -12,6 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from .algorithms.geo import distance_km
+from .algorithms.recommend import rank_offers
 from .algorithms.credipay import analyze_payment_options, canonical_provider, filter_and_rank_by_credit
 from .algorithms.hours import hours_status
 from .algorithms.imwp import parse_mall_address
@@ -21,6 +23,7 @@ from .algorithms.offer_quality import flatten_specs
 from .algorithms.paco import calculate_paco_score
 from .algorithms.svdp import INQUIRY_QUESTIONS, compute_stock_certainty, generate_inquiry_dossier, simulate_inquiry
 from .algorithms.tfra import find_emergency_fallbacks
+from .agent import follow_up
 from .assistant import KalamAssistant
 from .nlu import llm_enabled
 from .search import search_products, tokenize
@@ -110,6 +113,8 @@ class ChatRequest(BaseModel):
     current_hub: Optional[str] = None
     active_product_id: Optional[str] = None
     active_shop_id: Optional[str] = None
+    user_lat: Optional[float] = Field(None, ge=-90, le=90)
+    user_lon: Optional[float] = Field(None, ge=-180, le=180)
     # حافظه گفتگو: وضعیت جستجوی قبلی که پاسخ قبلی برگردانده بود
     state: Optional[dict] = None
     # پاسخ ساختاریافته درخت نیاز مبهم؛ به جای درک متن مستقیم به جستجو می‌رود
@@ -147,11 +152,12 @@ def get_commercial_hubs(conn: sqlite3.Connection = Depends(get_db)):
     """
     def compute(c):
         rows = c.execute("""
-            SELECT location_label, shops_with_offers, category_only_shops, offer_count
+            SELECT location_label, shops_with_offers, category_only_shops, offer_count, lat, lon
             FROM hub_stats WHERE shops_with_offers >= 2
             ORDER BY shops_with_offers DESC LIMIT 30
         """).fetchall()
-        return {"hubs": [{"name": r[0], "shop_count": r[1], "category_only_count": r[2], "offer_count": r[3]} for r in rows]}
+        return {"hubs": [{"name": r[0], "shop_count": r[1], "category_only_count": r[2], "offer_count": r[3],
+                          "lat": r[4], "lon": r[5]} for r in rows]}
 
     return cached("hubs", conn, compute)
 
@@ -170,6 +176,9 @@ def search_endpoint(
     hours_known: bool = False,
     open_now: bool = False,
     include_copies: bool = False,
+    lat: Optional[float] = Query(None, ge=-90, le=90),
+    lon: Optional[float] = Query(None, ge=-180, le=180),
+    max_km: Optional[float] = Query(None, gt=0, le=100),
     conn: sqlite3.Connection = Depends(get_db)
 ):
     """
@@ -182,7 +191,8 @@ def search_endpoint(
         "provider": canonical_provider(provider), "fresh": fresh, "hours_known": hours_known,
         "open_now": open_now, "include_copies": include_copies,
     }
-    results = search_products(conn, tokens, category=category, limit=limit, **filters) if tokens else []
+    results = search_products(conn, tokens, category=category, limit=limit, user_lat=lat, user_lon=lon,
+                              max_km=max_km, **filters) if tokens else []
     return {"query": q, "total_found": len(results), "filters": filters, "products": results}
 
 
@@ -224,6 +234,8 @@ def _shop_public(row: dict) -> dict:
 
 @app.get("/api/product/{product_id}")
 def get_product_details(product_id: str, hub: Optional[str] = Query(None, max_length=80),
+                        lat: Optional[float] = Query(None, ge=-90, le=90),
+                        lon: Optional[float] = Query(None, ge=-180, le=180),
                         conn: sqlite3.Connection = Depends(get_db)):
     """
     جزئیات کالا، مشخصات فنی، همه آفرهای حضوری (با برچسب کپی/قیمت پرت) و فروشگاه‌های هم‌صنفی که
@@ -244,7 +256,7 @@ def get_product_details(product_id: str, hub: Optional[str] = Query(None, max_le
         SELECT o.offer_id, o.price_toman, o.last_price_changed_at, o.warranty, o.seller_title, o.description,
                o.is_copy, o.price_suspect,
                s.shop_id, s.name, s.address, s.location_label, s.payment_options, s.contacts, s.weekly_hours,
-               s.instagram, s.website_url, s.is_verified
+               s.instagram, s.website_url, s.is_verified, s.lat AS shop_lat, s.lon AS shop_lon
         FROM offers o JOIN shops s ON o.shop_id = s.shop_id
         WHERE o.product_id = ?
         ORDER BY o.is_copy, o.price_suspect, o.price_toman IS NULL, o.price_toman ASC
@@ -252,6 +264,7 @@ def get_product_details(product_id: str, hub: Optional[str] = Query(None, max_le
 
     offers_list = []
     for r in map(dict, rows):
+        dist = distance_km(lat, lon, r["shop_lat"], r["shop_lon"])
         offers_list.append({
             "offer_id": r["offer_id"],
             "price_toman": r["price_toman"],
@@ -261,7 +274,8 @@ def get_product_details(product_id: str, hub: Optional[str] = Query(None, max_le
             "description": r["description"],
             "is_copy": bool(r["is_copy"]),
             "price_suspect": bool(r["price_suspect"]),
-            "shop": _shop_public(r),
+            "shop": {**_shop_public(r), "lat": r["shop_lat"], "lon": r["shop_lon"]},
+            "distance_km": round(dist, 2) if dist is not None else None,
             "stock_certainty": compute_stock_certainty(
                 {"price_toman": r["price_toman"], "last_price_changed_at": r["last_price_changed_at"]},
                 {"weekly_hours": r["weekly_hours"]},
@@ -282,7 +296,17 @@ def get_product_details(product_id: str, hub: Optional[str] = Query(None, max_le
         """, (f"%{prod['category_name']}%", hub or "")).fetchall()
         category_only = [_shop_public(dict(r)) for r in cand]
 
+    # پیشنهاد کلم: بهترین ترکیب قیمت، نزدیکی، باز بودن و تازگی قیمت، با دلیل
+    recommendation = rank_offers([{
+        "offer_id": o["offer_id"], "price_toman": o["price_toman"], "is_copy": o["is_copy"],
+        "price_suspect": o["price_suspect"], "distance_km": o["distance_km"],
+        "hours_state": o["shop"]["hours"]["state"],
+        "days_since_update": o["stock_certainty"]["days_since_update"],
+        "has_credit": o["shop"]["credit_info"]["has_credit"],
+    } for o in offers_list])
+
     return {
+        "recommendation": recommendation,
         "product": {
             "product_id": prod["product_id"],
             "title": prod["persian_title"],
@@ -339,17 +363,24 @@ def get_complementary_items(product_id: str, shop_id: Optional[str] = None,
 
     best_by_product = {}
     for target_pattern, dep_score, reason in rules:
-        candidates = cursor.execute("""
+        # الگو اول روی جدول کوچک دسته‌ها اعمال می‌شود؛ بعد کوئری کالا از ایندکس category_name استفاده می‌کند
+        cats = [r[0] for r in cursor.execute(
+            "SELECT category_name FROM categories WHERE category_name LIKE ? AND category_name != ?",
+            (target_pattern, base_product["category_name"]))]
+        if not cats:
+            continue
+        ph = ",".join("?" * len(cats))
+        candidates = cursor.execute(f"""
             SELECT p.product_id, p.persian_title, p.category_name, p.brand_name, o.price_toman,
                    o.last_price_changed_at, s.shop_id, s.name, s.address, s.location_label
             FROM products p
             JOIN offers o ON p.product_id = o.product_id
             JOIN shops s ON o.shop_id = s.shop_id
-            WHERE p.category_name LIKE ? AND p.category_name != ?
+            WHERE p.category_name IN ({ph})
               AND o.price_toman IS NOT NULL AND o.is_copy = 0 AND o.price_suspect = 0
             ORDER BY (s.shop_id = ?) DESC, (s.location_label = ?) DESC, o.price_toman ASC
             LIMIT 120
-        """, (target_pattern, base_product["category_name"], shop_id or "", base_shop.get("location_label") or "")).fetchall()
+        """, (*cats, shop_id or "", base_shop.get("location_label") or "")).fetchall()
         for c in candidates:
             cand = {
                 "product_id": c[0], "title": c[1], "category_name": c[2], "brand_name": c[3], "price_toman": c[4],
@@ -446,6 +477,19 @@ def simulate_inquiry_endpoint(req: InquirySimulationRequest, conn: sqlite3.Conne
     return simulate_inquiry(dict(zip(keys, row)), req.question)
 
 
+class FollowUpRequest(BaseModel):
+    offer_id: str = Field(..., max_length=64)
+
+
+@app.post("/api/agent/follow-up")
+def agent_follow_up(req: FollowUpRequest, conn: sqlite3.Connection = Depends(get_db)):
+    """ایجنت پیگیری: ساعت کاری ← پاسخ‌گویی ← قیمت/موجودی ← گارانتی ← اقساط ← تصمیم و جایگزین‌ها (شبیه‌سازی)"""
+    result = follow_up(conn, req.offer_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="آفر یافت نشد.")
+    return result
+
+
 @app.get("/api/inquiry/questions")
 def inquiry_questions():
     return {"questions": [{"key": k, "label": v} for k, v in INQUIRY_QUESTIONS.items()]}
@@ -478,6 +522,8 @@ def chat_with_assistant(req: ChatRequest, conn: sqlite3.Connection = Depends(get
             "current_hub": req.current_hub,
             "active_product_id": req.active_product_id,
             "active_shop_id": req.active_shop_id,
+            "user_lat": req.user_lat,
+            "user_lon": req.user_lon,
         },
         state=req.state,
         tree=req.tree.model_dump() if req.tree else None,

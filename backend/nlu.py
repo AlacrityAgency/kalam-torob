@@ -21,10 +21,11 @@ from .search import normalize_text, tokenize
 
 log = logging.getLogger("kalam.nlu")
 
-INTENTS = ["search", "route", "panic", "credit", "hours", "greeting", "other"]
+INTENTS = ["search", "route", "visit", "panic", "credit", "hours", "greeting", "other"]
 
 PANIC_WORDS = ["بسته بود", "بستس", "بسته است", "بسته‌ست", "موجود نداشت", "تموم کرده", "تمام کرده",
                "پنیک", "panic", "جایگزین"]
+VISIT_WORDS = ["کی برم", "کی بریم", "چه ساعتی برم", "چه موقع برم", "بهترین زمان", "بهترین ساعت", "کی باز", "کی بازن"]
 ROUTE_WORDS = ["سبد", "سبدم", "مسیر", "مسیرم", "بچین", "پاساژگردی", "برنامه حرکت"]
 CREDIT_WORDS = ["اقساط", "اقساطی", "قسطی", "قسط", "اعتباری", "اعتبار", "bnpl"]
 IN_PERSON_WORDS = ["کارتخوان", "حضوری", "پوز"]
@@ -50,7 +51,8 @@ STOPWORDS = {
     # پسوندها و کلمات کمکی که با جدا شدن نیم‌فاصله توکن مستقل می‌شوند
     "ها", "های", "هایی", "ای", "ی", "تر", "ترین", "ترش", "ولی", "فقط", "دارای", "کدوم", "کدومه", "کدام", "بود",
     "بوده", "هستن", "هستند", "دارند", "داشته", "باشه", "باشد", "کنم", "میشه", "شه", "چطور", "چه",
-    "اینو", "اون", "این", "همین", "همون", "پیدا", "کجاست", "نیاز", "لازم", "دارم",
+    "اینو", "اون", "این", "همین", "همون", "پیدا", "کجاست", "نیاز", "لازم", "دارم", "نزدیک", "نزدیکم",
+    "نزدیکترین", "اطرافم", "نزدیکی", "دور", "بر", "کی", "برم", "بریم", "ساعتی", "زمان",
 } | set(PREVIOUS_WORDS)
 
 _NUM_WORDS = {"نیم": 0.5, "یک": 1, "یه": 1, "دو": 2, "سه": 3, "چهار": 4, "پنج": 5, "شش": 6, "شیش": 6, "هفت": 7,
@@ -145,6 +147,8 @@ def local_extract(text: str, places: list[str]) -> dict:
 
     if any(has_word(t, w) for w in PANIC_WORDS):
         intent = "panic"
+    elif any(has_word(t, w) for w in VISIT_WORDS):
+        intent = "visit"
     elif any(has_word(t, w) for w in ROUTE_WORDS):
         intent = "route"
     elif not tokens and credit:
@@ -167,6 +171,7 @@ def local_extract(text: str, places: list[str]) -> dict:
         "in_person": any(has_word(t, w) for w in IN_PERSON_WORDS),
         "open_now": has_word(t, "الان باز") or has_word(t, "باز باشه") or has_word(t, "باز باشد"),
         "friday": has_word(t, "جمعه") or has_word(t, "جمعه ها"),
+        "near": any(has_word(t, w) for w in ("نزدیک", "نزدیکم", "نزدیک ترین", "نزدیکترین", "دور و بر", "اطرافم", "نزدیکی")),
         # «فروشگاه‌های اقساطی» فهرست فروشگاه می‌خواهد، نه ادامه جستجوی کالای قبلی
         "shop_oriented": any(has_word(t, w) for w in ("فروشگاه", "فروشگاه های", "فروشگاهها", "مغازه", "مغازه ها", "مغازه های", "مغازه‌ها")),
         "refers_previous": any(has_word(t, normalize_text(w)) for w in PREVIOUS_WORDS),
@@ -201,7 +206,8 @@ _SYSTEM = (
     "You convert a Persian shopping message for an in-person shopping assistant in Tehran into structured slots. "
     "Only extract what the user said; never invent products, places or numbers. "
     "Budgets are in toman; colloquial «۳ تومن» means 3,000,000 toman. "
-    "intent: search (find a product), route (plan a multi-item shopping route), panic (a shop was closed or out of stock), "
+    "intent: search (find a product), route (plan a multi-item shopping route), visit (best time to go for the cart route), "
+    "panic (a shop was closed or out of stock), "
     "credit (shops with installment payment, no product named), hours (opening hours), greeting, other. "
     "place must be copied exactly from the provided list, otherwise empty."
 )

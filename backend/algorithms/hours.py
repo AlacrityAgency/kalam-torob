@@ -212,3 +212,50 @@ def hours_status(raw, at: datetime | None = None):
         "friday_closed": None if friday == UNKNOWN else (friday == []),
         "week": [{"day": FA_DAY[i], "hours": _fmt_ranges(days.get(i, UNKNOWN))} for i in WEEK_ORDER],
     }
+
+
+def _intersect(a, b):
+    out = []
+    for s1, e1 in a:
+        for s2, e2 in b:
+            s, e = max(s1, s2), min(e1, e2)
+            if s < e:
+                out.append((s, e))
+    return out
+
+
+def common_open_window(raw_list, at: datetime | None = None, min_minutes: int = 45, days_ahead: int = 7):
+    """
+    زودترین بازه‌ای (از الان تا ۷ روز بعد) که همه فروشگاه‌های دارای ساعت کاری مشخص هم‌زمان باز باشند.
+    فروشگاه‌های بدون ساعت کاری در محاسبه نیستند و تعدادشان جدا گزارش می‌شود.
+    خروجی: {"label", "known_count", "unknown_count", "found"}
+    """
+    parsed = [raw if isinstance(raw, dict) and "known" in raw else parse_weekly_hours(raw) for raw in raw_list]
+    known = [p for p in parsed if p["known"]]
+    unknown_count = len(parsed) - len(known)
+    if not known:
+        return {"found": False, "known_count": 0, "unknown_count": unknown_count,
+                "label": "ساعت کاری هیچ‌کدام از فروشگاه‌ها ثبت نشده؛ پیش از رفتن تماس بگیرید"}
+
+    at = (at or now_tehran()).astimezone(TEHRAN_TZ)
+    now_min = at.hour * 60 + at.minute
+    for offset in range(days_ahead):
+        weekday = (at.weekday() + offset) % 7
+        window = [(now_min if offset == 0 else 0, 24 * 60)]
+        for p in known:
+            ranges = p["days"].get(weekday, UNKNOWN)
+            if ranges == UNKNOWN:
+                continue  # این روزِ این فروشگاه نامشخص است؛ محدودیتی اعمال نمی‌شود
+            ranges = [(s, e if e > s else 24 * 60) for s, e in ranges]
+            window = _intersect(window, ranges)
+            if not window:
+                break
+        window = [(s, e) for s, e in window if e - s >= min_minutes]
+        if window:
+            s, e = window[0]
+            when = "امروز" if offset == 0 else "فردا" if offset == 1 else FA_DAY[weekday]
+            note = f"؛ ساعت کاری {to_fa_digits(unknown_count)} فروشگاه ثبت نشده" if unknown_count else ""
+            return {"found": True, "known_count": len(known), "unknown_count": unknown_count,
+                    "label": f"{when} از {_fmt(s)} تا {_fmt(e)} همه فروشگاه‌های مسیر باز هستند{note}"}
+    return {"found": False, "known_count": len(known), "unknown_count": unknown_count,
+            "label": "در هفت روز آینده زمانی که همه فروشگاه‌های مسیر هم‌زمان باز باشند پیدا نشد؛ مسیر را در دو روز تقسیم کنید"}

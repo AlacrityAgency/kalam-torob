@@ -18,6 +18,7 @@ import sqlite3
 from typing import Any, Dict
 
 from .algorithms.credipay import PROVIDER_LABELS, filter_and_rank_by_credit
+from .algorithms.geo import distance_km
 from .algorithms.hours import hours_status
 from .algorithms.imwp import parse_mall_address
 from .algorithms.indp import detect_ambiguous_intent, resolve_tree_answers, DIAGNOSTIC_TREES
@@ -28,7 +29,7 @@ from .algorithms.tfra import find_emergency_fallbacks
 from .nlu import extract
 from .search import OFFER_COLUMNS, offer_matches, place_matches, search_products
 
-STATE_KEYS = ("tokens", "optional", "place", "budget_min", "budget_max", "provider", "credit", "open_now")
+STATE_KEYS = ("tokens", "optional", "place", "budget_min", "budget_max", "provider", "credit", "open_now", "near")
 
 
 def _fa_price(n) -> str:
@@ -74,12 +75,14 @@ class KalamAssistant:
 
         if tree:
             resolved = resolve_tree_answers(tree["category_key"], tree["option_index"], tree.get("budget_index"))
+            self.user_loc = (context.get("user_lat"), context.get("user_lon"))
             slots = {**resolved, "place": context.get("current_hub") or state.get("place"), "provider": None,
                      "credit": False, "open_now": False}
             response = self._search(slots, intro=f"گزینه‌های {resolved['label']}")
             response["nlu"] = "tree"
             return response
 
+        self.user_loc = (context.get("user_lat"), context.get("user_lon"))
         slots, source = extract(user_text or "", self.places, state)
         if not slots.get("place") and context.get("current_hub"):
             slots["place"] = context["current_hub"]
@@ -93,8 +96,8 @@ class KalamAssistant:
         intent = slots["intent"]
         if intent == "panic":
             return self._panic(context, cart_ids)
-        if intent == "route":
-            return self._route(cart_ids, slots.get("place"))
+        if intent in ("route", "visit"):
+            return self._route(cart_ids, slots.get("place"), visit=intent == "visit")
         if intent == "greeting":
             return {"type": "text", "message": "سلام! نام کالا را بگویید؛ می‌توانید محدوده، بودجه و اقساطی بودن را هم در همان جمله بنویسید. مثلاً «گوشی A55 قسطی در چارسو تا ۲۵ میلیون».", "state": state}
 
@@ -108,6 +111,7 @@ class KalamAssistant:
                 if slots.get(key):
                     merged[key] = slots[key]
             merged["cheapest"] = slots.get("cheapest")
+            merged["near"] = slots.get("near")
             return self._search(merged, intro="با شرایط جدید")
 
         if not tokens:
@@ -143,9 +147,14 @@ class KalamAssistant:
         }
         tokens, optional = slots.get("tokens") or [], slots.get("optional")
         # در گفتگو لوازم جانبی به جای کالای اصلی نشان داده نمی‌شوند («گوشی A55» ≠ «کاور A55»)
-        products = search_products(self.conn, tokens, optional=optional, limit=4, accessories="exclude", **filters)
+        ulat, ulon = getattr(self, "user_loc", (None, None))
+        products = search_products(self.conn, tokens, optional=optional, limit=4, accessories="exclude",
+                                   user_lat=ulat, user_lon=ulon, **filters)
         if slots.get("cheapest"):
             products.sort(key=lambda p: p["min_price_toman"])
+        near = bool(slots.get("near")) and ulat is not None
+        if near:
+            products.sort(key=lambda p: (p["nearest_km"] is None, p["nearest_km"] or 0))
 
         new_state = {k: slots.get(k) for k in STATE_KEYS}
         query_label = " ".join(tokens)
@@ -160,8 +169,10 @@ class KalamAssistant:
                 msg = f"برای «{query_label}» فروشگاه حضوری پیدا نشد. عبارت کوتاه‌تر یا نام برند را امتحان کنید."
             return {"type": "product_search", "message": msg, "products": [], "state": new_state}
 
-        prod_list = [self._with_best_offer(p, filters) for p in products]
-        head = intro or "نتایج خرید حضوری"
+        prod_list = [self._with_best_offer(p, filters, nearest=near) for p in products]
+        head = intro or ("نزدیک‌ترین فروشگاه‌ها" if near else "نتایج خرید حضوری")
+        if slots.get("near") and ulat is None:
+            conditions = (conditions + "، " if conditions else "") + "برای «نزدیک‌ترین»، موقعیتتان را از دکمه «موقعیت من» تعیین کنید"
         msg = f"{head} برای «{query_label}»" + (f" ({conditions})" if conditions else "") + ":"
         return {
             "type": "product_search",
@@ -171,8 +182,8 @@ class KalamAssistant:
             "state": new_state,
         }
 
-    def _with_best_offer(self, p, filters):
-        """ارزان‌ترین آفر منطبق با همان شرایط خرید، با ساعت کاری و استعلام"""
+    def _with_best_offer(self, p, filters, nearest=False):
+        """ارزان‌ترین (یا نزدیک‌ترین) آفر منطبق با همان شرایط خرید، با ساعت کاری، فاصله و استعلام"""
         cursor = self.conn.cursor()
         cursor.execute(f"""
             SELECT {OFFER_COLUMNS}, o.warranty, s.name, s.contacts
@@ -181,12 +192,16 @@ class KalamAssistant:
             ORDER BY o.price_toman ASC
         """, (p["product_id"],))
         cols = [d[0] for d in cursor.description]
-        best = None
+        ulat, ulon = getattr(self, "user_loc", (None, None))
+        matches = []
         for values in cursor.fetchall():
             row = dict(zip(cols, values))
             if offer_matches(row, **filters):
-                best = row
-                break
+                row["distance_km"] = distance_km(ulat, ulon, row["lat"], row["lon"])
+                matches.append(row)
+        best = None
+        if matches:
+            best = min(matches, key=lambda r: (r["distance_km"] is None, r["distance_km"] or 0)) if nearest else matches[0]
         item = {
             "product_id": p["product_id"],
             "title": p["persian_title"],
@@ -206,6 +221,7 @@ class KalamAssistant:
                 "warranty": best["warranty"],
                 "hours": hours["label"],
                 "hours_state": hours["state"],
+                "distance_km": round(best["distance_km"], 2) if best["distance_km"] is not None else None,
                 "parsed_address": parse_mall_address(best["address"], best["location_label"]),
             }
             item["stock_info"] = compute_stock_certainty(
@@ -228,7 +244,7 @@ class KalamAssistant:
             return {"type": "text", "message": "این مغازه در پایگاه داده پیدا نشد؛ لطفاً از صفحه کالا دوباره امتحان کنید."}
         return {"type": "panic_fallback", "message": fallbacks["action_guide"], "fallback_data": fallbacks}
 
-    def _route(self, cart_ids, place):
+    def _route(self, cart_ids, place, visit=False):
         if not cart_ids:
             return {
                 "type": "text",
@@ -246,9 +262,15 @@ class KalamAssistant:
         if closed:
             note += f"\n⚠️ این مغازه‌ها الان بسته‌اند: {'، '.join(closed)}"
         savings_msg = f"\n**{savings['description']}**" if savings else ""
+        plan = route_result.get("visit_plan")
+        plan_msg = f"\n🕒 **بهترین زمان مراجعه:** {plan['label']}" if plan else ""
+        head = f"برای {to_fa_digits(primary.get('stops_count', 0))} مغازه مسیر خریدتان" if visit else \
+            f"مسیر خرید حضوری در {primary.get('hub') or 'مراکز خرید تهران'} با {to_fa_digits(primary.get('stops_count', 0))} توقف آماده شد."
+        if visit:
+            return {"type": "cart_route", "message": f"{head}:{plan_msg}{note}", "route": route_result}
         return {
             "type": "cart_route",
-            "message": f"مسیر خرید حضوری در {primary.get('hub') or 'مراکز خرید تهران'} با {to_fa_digits(primary.get('stops_count', 0))} توقف آماده شد.{note}{savings_msg}",
+            "message": f"{head}{note}{plan_msg}{savings_msg}",
             "route": route_result,
         }
 
