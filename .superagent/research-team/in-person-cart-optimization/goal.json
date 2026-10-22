@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "id": "in-person-cart-optimization",
+  "revision": 1,
+  "objective": "Design, formalize, and evaluate an optimal in-person multi-item shopping list and route navigation engine for Torob Physical Shopping Assistant (Kalam)",
+  "audience": "Torob Hackathon Judges, Product Engineers, and Tehran In-Person Shoppers",
+  "questions": [
+    "Q1: Algorithmic Formulation",
+    "Q2: Dataset Feasibility & Catalog Topology",
+    "Q3: Multi-Level Navigation & Floor-Level Wayfinding",
+    "Q4: Product Experience & Cart Journey",
+    "Q5: Security, Neutrality, Anti-Gaming & Latency"
+  ],
+  "scope": "Tehran Torob in-person dataset and real-world urban shopping dynamics",
+  "constraints": [
+    "Sub-second response time (<500ms)",
+    "Strict platform neutrality among 6,476 shops",
+    "Realistic indoor physical navigation without GPS in basements",
+    "Preserve Iranian payment options and hours of operation"
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "description": "Rigorous mathematical formulation and heuristic algorithm with pseudo-code and complexity analysis",
+      "required_evidence_kind": "algorithmic proofs and python prototype",
+      "mandatory": true
+    },
+    {
+      "id": "A2",
+      "description": "Empirical dataset validation on real product combinations, shop density, and price/travel trade-offs",
+      "required_evidence_kind": "dataset queries and simulation results",
+      "mandatory": true
+    },
+    {
+      "id": "A3",
+      "description": "Comprehensive 3-tier routing architecture and offline fallback strategy",
+      "required_evidence_kind": "spatial architecture documentation and wayfinding logic",
+      "mandatory": true
+    },
+    {
+      "id": "A4",
+      "description": "Complete UI/UX specification with ASCII wireframes and user flows",
+      "required_evidence_kind": "ux wireframes and interaction models",
+      "mandatory": true
+    },
+    {
+      "id": "A5",
+      "description": "Security, antitrust compliance, and operational guardrail analysis",
+      "required_evidence_kind": "threat model and latency benchmarks",
+      "mandatory": true
+    }
+  ],
+  "permitted_actions": [
+    "read dataset csv files",
+    "run local python validation scripts",
+    "write study documentation and architecture artifacts"
+  ],
+  "budget": {
+    "max_attempts": 10,
+    "max_active": 3,
+    "max_seconds": 3600,
+    "max_tokens": null
+  },
+  "stop_policy": {
+    "allowed_answers": [
+      "supported",
+      "conditional",
+      "unresolved",
+      "contradicted"
+    ]
+  },
+  "created_at": "2026-10-22T13:05:00+03:30"
+}

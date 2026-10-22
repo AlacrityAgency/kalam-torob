@@ -1,0 +1,1 @@
+{"id": "T3", "revision": 1, "goal_revision": 1, "question_id": "Q3: Multi-Level Navigation & Floor-Level Wayfinding", "role": "researcher", "research_type": "exploratory", "dependencies": [], "input_refs": [], "write_resources": ["file:.superagent/in_person_cart_routing_research.md"], "acceptance_ids": ["A3"], "operation_id": "op-indoor-navigation-design", "schema_version": 1}

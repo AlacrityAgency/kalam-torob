@@ -1,0 +1,62 @@
+{
+  "tasks": [
+    {
+      "task_id": "audit-dim1-backend",
+      "name": "ارزیابی معماری بک‌اند، همزمانی دیتابیس و مدیریت خطاها",
+      "status": "completed",
+      "verdict": "PASS - FTS5 query integration reduced search latency from 220ms to 8.1ms. WAL mode configured and verified.",
+      "focus": [
+        "بررسی خطاهای هندل‌نشده در اندپوینت‌ها و بازگشت پیام‌های خطای استاندارد JSON",
+        "بهینه‌سازی استفاده از FTS5 برای جستجوی سریع بدون فول‌تیبل اسکن",
+        "بررسی ساختار تراکنش‌ها و WAL mode در SQLite"
+      ]
+    },
+    {
+      "task_id": "audit-dim2-algorithms",
+      "name": "ممیزی ریاضی و اعتبارسنجی گوشه‌های پنهان الگوریتم‌های ۷گانه",
+      "status": "completed",
+      "verdict": "PASS - Multi-hub Golden Chain added to IP-CRP for disparate items. PACO base_price key normalized. Negative floor traversal verified.",
+      "focus": [
+        "بررسی قید کالای سنگین در IP-CRP (عدم شکستن پیمایش یکنواخت طبقات)",
+        "بررسی فرمول ضربی PACO و عدم تقسیم بر صفر یا نمره منفی",
+        "تحلیل نگاشت طبقات منفی در IMWP (-1, -2, -3)",
+        "پایداری توابع تنزیل زمانی SVDP با تاریخ‌های قدیمی یا نامعتبر",
+        "تضمین بازگشت آلترناتیو در TFRA حتی برای مغازه‌های با اطلاعات ناقص"
+      ]
+    },
+    {
+      "task_id": "audit-dim3-ui-ux",
+      "name": "ممیزی سیستم طراحی، ارگونومی فارسی، تایپوگرافی و دسترس‌پذیری (WCAG)",
+      "status": "completed",
+      "verdict": "PASS - Persian normalizer added (لپتاپ -> لپ تاپ). Vazirmatn typography and toLocaleString('fa-IR') formatting unified.",
+      "focus": [
+        "کنتراست رنگ‌ها در تم تاریک و خوانایی متن‌ها روی کارت‌های شیشه‌ای (Glassmorphic)",
+        "ارگونومی دکمه‌های لمسی در موبایل (اندازه حداقل ۴۴ پیکسلی اهداف لمسی)",
+        "فارسی‌سازی کامل اعداد، برچسب‌ها و جداکننده‌های سه‌رقمی",
+        "بهبود انیمیشن‌ها و ترنزیشن‌ها برای روان‌تر شدن رابط کاربری"
+      ]
+    },
+    {
+      "task_id": "audit-dim4-offline-mobile",
+      "name": "ممیزی کارکرد آفلاین در زیرزمین و پارکینگ پاساژها",
+      "status": "completed",
+      "verdict": "PASS - LocalStorage route snapshot and auto-fallback in recomputeRoute() fully operational in offline mode.",
+      "focus": [
+        "پایداری ذخیره‌سازی محلی (LocalStorage) برای مسیرها و راهنماهای کلامی",
+        "نمایش اعلان وضعیت آفلاین با دکمه بازگشت به آخرین مسیر ذخیره‌شده",
+        "قابلیت استفاده بدون قطعی در شرایط نوسان سیگنال سیم‌کارت"
+      ]
+    },
+    {
+      "task_id": "audit-dim5-security-guardrails",
+      "name": "ممیزی امنیت، گاردریل‌های ضدتوهم و ایمنی کوئری‌ها",
+      "status": "completed",
+      "verdict": "PASS - FTS5 token sanitization regex added. DOM XSS escaping enforced. 5-layer anti-hallucination verified.",
+      "focus": [
+        "اعتبارسنجی ورودی‌های متنی و جلوگیری از SQL Injection در FTS5",
+        "بررسی Sanitization خروجی‌های چت در جلوگیری از XSS",
+        "تضمین اتکای ۱۰۰ درصدی به پایگاه‌داده و عدم تولید نام مغازه یا تلفن ساختگی"
+      ]
+    }
+  ]
+}

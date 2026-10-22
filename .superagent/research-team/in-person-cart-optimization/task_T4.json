@@ -1,0 +1,1 @@
+{"id": "T4", "revision": 1, "goal_revision": 1, "question_id": "Q4: Product Experience & Cart Journey", "role": "researcher", "research_type": "user", "dependencies": [], "input_refs": [], "write_resources": ["file:.superagent/in_person_cart_routing_research.md"], "acceptance_ids": ["A4"], "operation_id": "op-ux-wireframes-flows", "schema_version": 1}

@@ -1,0 +1,1 @@
+{"schema_version": 1, "host": "gemini-antigravity", "version": "2.0", "observed_at": "2026-10-22T13:08:00+03:30", "mode": "serial", "capabilities": {"spawn": "observed", "message": "observed", "status": "observed", "cancel": "observed", "isolation": "observed", "usage": "observed"}, "evidence_refs": [], "max_active": 3}

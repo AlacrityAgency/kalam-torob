@@ -1,0 +1,49 @@
+{
+  "tasks": [
+    {
+      "task_id": "ui-task-1-tokens-and-palette",
+      "name": "تدوین پالت رنگی لوکس، گرادیانت‌ها، سایه‌ها و توکن‌های طراحی",
+      "status": "completed",
+      "verdict": "PASS - Luxury obsidian palette (#060911), neon Torob red, Kalam emerald, and cyber cyan specular gradients fully applied.",
+      "focus": [
+        "جایگزینی رنگ‌های تخت با پالت لوکس تاریک (#05070D، #0B101E، #121A2D)",
+        "طراحی گرادیانت‌های نئونی اختصاصی ترب قرمز (#FF334B -> #D32F2F) و زمردی کَلَم (#00E676 -> #10B981)",
+        "تعریف سایه‌های سه‌بعدی و هالوهای نوری (Ambient Glow & Specular Borders)"
+      ]
+    },
+    {
+      "task_id": "ui-task-2-layout-and-hierarchy",
+      "name": "معماری مجدد چیدمان و داشبورد تعاملی (Command Center Layout)",
+      "status": "completed",
+      "verdict": "PASS - Floating specular navbar, 4-card live market KPI command bar, and segmented glass control tabs deployed.",
+      "focus": [
+        "طراحی نوار ناوبری شیشه‌ای شناور با نشانگرهای زنده بازار",
+        "ایجاد بنر شاخص‌های زنده (کالاهای موجود، مغازه‌های فعال، شاخص سود خرید حضوری)",
+        "طراحی لایوت هیبریدی هوشمند: چت‌بات در کنار تایم‌لاین زنده مسیریاب پاساژ"
+      ]
+    },
+    {
+      "task_id": "ui-task-3-micro-interactions-and-cards",
+      "name": "پیاده‌سازی کارت‌های مدرن، امواج صوتی تعاملی و دکمه‌های شیشه‌ای",
+      "status": "completed",
+      "verdict": "PASS - Real Torob CDN product thumbnails, animated frequency audio equalizer, and pulsing panic orb active.",
+      "focus": [
+        "کارت‌های استراتژی با افکت شیشه‌ای بازتابی و نشانگر درخشان",
+        "تایم‌لاین گام‌به‌گام با اتصال عمودی نورانی بین طبقات پاساژ",
+        "طراحی ویژوالایزر صوتی فرکانسی برای اسکریپت ۱۲ ثانیه‌ای تماس",
+        "دکمه پنیک با پالس نوری هشدار اضطراری و دیالوگ با کنتراست فوق‌العاده"
+      ]
+    },
+    {
+      "task_id": "ui-task-4-typography-and-polish",
+      "name": "تایپوگرافی چشم‌نواز فارسی، اعداد بومی و پرداخت نهایی (Visual Polish)",
+      "status": "completed",
+      "verdict": "PASS - Vazirmatn multi-weight typography, Persian compound normalization, and WCAG AAA contrast validated.",
+      "focus": [
+        "تنظیم فواصل خطوط، وزن فونت‌ها (۳۰۰ تا ۹۰۰) و اعداد فارسی شکیل",
+        "ترنزیشن‌های نرم و افکت‌های هاور روان روی تمام المان‌ها",
+        "رسپانسیو کامل روی گوشی‌های هوشمند، تبلت و دسکتاپ"
+      ]
+    }
+  ]
+}

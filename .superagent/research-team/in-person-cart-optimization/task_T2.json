@@ -1,0 +1,1 @@
+{"id": "T2", "revision": 1, "goal_revision": 1, "question_id": "Q2: Dataset Feasibility & Catalog Topology", "role": "researcher", "research_type": "feasibility", "dependencies": [], "input_refs": [], "write_resources": ["file:.superagent/in_person_cart_routing_research.md"], "acceptance_ids": ["A2"], "operation_id": "op-dataset-empirical-eval", "schema_version": 1}

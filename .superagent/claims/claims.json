@@ -1,0 +1,90 @@
+[
+  {
+    "claim": "brand_name",
+    "code_status": "absent",
+    "doc_qualifier": "",
+    "close_matches": [],
+    "only_in": [],
+    "semantics": []
+  },
+  {
+    "claim": "category_name",
+    "code_status": "absent",
+    "doc_qualifier": "",
+    "close_matches": [],
+    "only_in": [],
+    "semantics": []
+  },
+  {
+    "claim": "image_urls",
+    "code_status": "absent",
+    "doc_qualifier": "",
+    "close_matches": [],
+    "only_in": [],
+    "semantics": []
+  },
+  {
+    "claim": "in_person",
+    "code_status": "absent",
+    "doc_qualifier": "",
+    "close_matches": [],
+    "only_in": [],
+    "semantics": []
+  },
+  {
+    "claim": "last_price_changed_at",
+    "code_status": "absent",
+    "doc_qualifier": "",
+    "close_matches": [],
+    "only_in": [],
+    "semantics": []
+  },
+  {
+    "claim": "location_label",
+    "code_status": "absent",
+    "doc_qualifier": "",
+    "close_matches": [],
+    "only_in": [],
+    "semantics": []
+  },
+  {
+    "claim": "payment_options",
+    "code_status": "absent",
+    "doc_qualifier": "",
+    "close_matches": [],
+    "only_in": [],
+    "semantics": []
+  },
+  {
+    "claim": "persian_title",
+    "code_status": "absent",
+    "doc_qualifier": "",
+    "close_matches": [],
+    "only_in": [],
+    "semantics": []
+  },
+  {
+    "claim": "price_toman",
+    "code_status": "absent",
+    "doc_qualifier": "",
+    "close_matches": [],
+    "only_in": [],
+    "semantics": []
+  },
+  {
+    "claim": "product_id",
+    "code_status": "absent",
+    "doc_qualifier": "",
+    "close_matches": [],
+    "only_in": [],
+    "semantics": []
+  },
+  {
+    "claim": "weekly_hours",
+    "code_status": "absent",
+    "doc_qualifier": "",
+    "close_matches": [],
+    "only_in": [],
+    "semantics": []
+  }
+]

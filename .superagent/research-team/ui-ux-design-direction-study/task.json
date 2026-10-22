@@ -1,0 +1,34 @@
+{
+  "tasks": [
+    {
+      "task_id": "ux-study-1-root-cause-analysis",
+      "name": "ریشه‌یابی و آسیب‌شناسی استایل فعلی (Post-Mortem of Dark Glassmorphism)",
+      "status": "in_progress",
+      "focus": [
+        "بررسی تضاد شناختی بین تم سیاه کریپتویی/گیمینگ با ذات خرید کالاهای روزمره ترب",
+        "مشکل دید و خوانایی رنگ‌های نئونی در زیر نور فلورسنت و هالوژن پاساژهای تجاری",
+        "تراکم بیش از حد المان‌ها و فقدان فضای تنفس بصری (Whitespace & Cognitive Load)"
+      ]
+    },
+    {
+      "task_id": "ux-study-2-benchmark-and-archetypes",
+      "name": "بنچ‌مارک الگوهای موفق بازار ایران و بین‌الملل و طراحی ۳ آرکتایپ بصری",
+      "status": "pending",
+      "focus": [
+        "سبک ۱: اصالت ترب و لایت‌مود مینیمال (Torob Clean Light Mode)",
+        "سبک ۲: ناوبری‌محور و نقشه تعاملی پاساژ (Mall Floor Navigator First)",
+        "سبک ۳: دارک‌مود مات مهندسی لوکس بدون نئون (Apple/Linear Matte Slate)"
+      ]
+    },
+    {
+      "task_id": "ux-study-3-user-journey-and-component-wireframes",
+      "name": "اصلاح جریان کاربری خریدار در پاساژ و بازطراحی المان‌ها",
+      "status": "pending",
+      "focus": [
+        "طراحی کارت‌های سبد خرید شبیه فاکتور رسمی شفاف بازار",
+        "طراحی مسیر طبقات به صورت راهنمای ایستگاهی مترو/نقشه (Metro-Style Floor Line)",
+        "دکمه پنیک ساده و حرفه‌ای (بدون ایجاد حس بحران یا آلودگی بصری)"
+      ]
+    }
+  ]
+}

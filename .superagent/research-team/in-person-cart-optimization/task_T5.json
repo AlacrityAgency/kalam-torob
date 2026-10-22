@@ -1,0 +1,1 @@
+{"id": "T5", "revision": 1, "goal_revision": 1, "question_id": "Q5: Security, Neutrality, Anti-Gaming & Latency", "role": "reviewer", "research_type": "verification", "dependencies": [], "input_refs": [], "write_resources": ["file:.superagent/in_person_cart_routing_research.md"], "acceptance_ids": ["A5"], "operation_id": "op-security-neutrality-eval", "schema_version": 1}

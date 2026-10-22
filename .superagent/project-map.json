@@ -1,0 +1,120 @@
+{
+  "version": 1,
+  "project": "/Users/dazzle/torob",
+  "files": [
+    {
+      "path": "WHITEPAPER.md",
+      "role": "unknown",
+      "reason": "activation not established",
+      "sha256": "e9d8219c7f6389fd2d77295bdd98c7c53ea8b14d7908e2e11f4fd4303bb73a9e"
+    },
+    {
+      "path": "backend/assistant.py",
+      "role": "unknown",
+      "reason": "activation not established",
+      "sha256": "41570dd697f09b1790615f44235df50a0b98aca67a7ca4ed30a45980497f3612"
+    },
+    {
+      "path": "backend/main.py",
+      "role": "unknown",
+      "reason": "activation not established",
+      "sha256": "8880f10c243d5c43beb4769c7df63dffd84e6890ec2b7c66ebf8235b1faec298"
+    },
+    {
+      "path": "backend/algorithms/paco.py",
+      "role": "unknown",
+      "reason": "activation not established",
+      "sha256": "97ecf75818bc4125797261ced7f2555529c3b73aa8882fa26ba17cbe3365f2ba"
+    },
+    {
+      "path": "backend/algorithms/tfra.py",
+      "role": "unknown",
+      "reason": "activation not established",
+      "sha256": "01950aa30e903bebbfeca9c6cd962cb3c0540ec5db249fbe478ea4a0d7b134f0"
+    },
+    {
+      "path": "backend/algorithms/indp.py",
+      "role": "unknown",
+      "reason": "activation not established",
+      "sha256": "00fad85662888d141dff63310620883a8ac29d55d6557de857eeac3576c8c1e4"
+    },
+    {
+      "path": "backend/algorithms/svdp.py",
+      "role": "unknown",
+      "reason": "activation not established",
+      "sha256": "55546129c133a7ed685db17a1c5f3fe8c22d4d8be89241a33fba0f9a730f1523"
+    },
+    {
+      "path": "backend/algorithms/ip_crp.py",
+      "role": "unknown",
+      "reason": "activation not established",
+      "sha256": "ca8fb31e30cbcde24a9230a34184393ebe9da09dbbf54c4aa43e1ed9019a432e"
+    },
+    {
+      "path": "backend/algorithms/__init__.py",
+      "role": "unknown",
+      "reason": "activation not established",
+      "sha256": "0bb6d7926c58a4f247028392dad95120d627f2d897c799e2bb9ef5068e820f06"
+    },
+    {
+      "path": "backend/algorithms/credipay.py",
+      "role": "unknown",
+      "reason": "activation not established",
+      "sha256": "3318437872b520871c94ea3314451c11287a1ee2a98daf8a2819ff8f01fac51f"
+    },
+    {
+      "path": "backend/algorithms/imwp.py",
+      "role": "unknown",
+      "reason": "activation not established",
+      "sha256": "888496bbafc014901c1b4fbb75f86d77f4f161780a9a7f325d96d9222088e8ae"
+    },
+    {
+      "path": "public/index.html",
+      "role": "unknown",
+      "reason": "activation not established",
+      "sha256": "9c1fc640aa17b11cc92d0130453ac5e213a2a98b554488ccdcb770e4f1ae22fe"
+    },
+    {
+      "path": "public/app.css",
+      "role": "unknown",
+      "reason": "activation not established",
+      "sha256": "5ca9442abd29bdf1ace0fd2db692aa433ce41b5f8e9734b7b6658c83f741b868"
+    },
+    {
+      "path": "public/app.js",
+      "role": "unknown",
+      "reason": "activation not established",
+      "sha256": "94e44545748cc7758636d6bb1e77844efb26593bdacc42800a8984a8c7fa0e56"
+    },
+    {
+      "path": "scripts/build_db.py",
+      "role": "unknown",
+      "reason": "activation not established",
+      "sha256": "ca880aa48da3bf00673940cf853bd04739f79ddb8678ea623bf441d0d555639b"
+    },
+    {
+      "path": "scripts/generate_pdf.py",
+      "role": "unknown",
+      "reason": "activation not established",
+      "sha256": "c1c3d7fc521f8f3374a7aca05313a4711867a309550fe0c444e2ddd236ea1f82"
+    }
+  ],
+  "roles": {
+    "unknown": 16
+  },
+  "entrypoints": [],
+  "suites": [],
+  "pages": [
+    "public/index.html"
+  ],
+  "contracts": [],
+  "acceptance": [],
+  "product_areas": {},
+  "limits": {
+    "max_file_bytes": 512000,
+    "max_files": 20000
+  },
+  "notes": [
+    "Unknown files are not assumed inactive. Declared roots require agent inspection of entrypoints/imports/build configuration."
+  ]
+}

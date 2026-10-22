@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "id": "whitepaper-and-architecture-audit",
+  "revision": 1,
+  "objective": "Exhaustive multi-disciplinary audit of Kalam Whitepaper and Architecture across Systems, Algorithms, Security, UX, and Claims Integrity",
+  "audience": "Torob Hackathon Judges, Technical Architects, Security Auditors, and Product Leads",
+  "questions": [
+    "Q1: Systems & Performance Architecture Audit - Is the SQLite FTS5 + in-memory engine sound, scalable, and verifiable under real concurrent load?",
+    "Q2: Mathematical & Algorithmic Rigor Audit - Are the 7 proprietary algorithms (IP-CRP, PACO, IMWP, CrediPay, INDP, SVDP, TFRA) mathematically sound, computationally bounded, and resilient?",
+    "Q3: Security & Anti-Gaming Audit - Are the 5-layer guardrails, anti-sabotage filters, and prompt injection defenses robust against adversarial manipulation?",
+    "Q4: Physical Urban UX & Offline Resilience Audit - Does the mobile journey truly solve the chaotic realities of Tehran malls and dead-zone basements?",
+    "Q5: Claims Trace & Rubric Compliance Audit - Are all performance, speed, and feature claims in the whitepaper strictly verifiable against the codebase and dataset?"
+  ],
+  "scope": "Kalam Whitepaper (WHITEPAPER.md), architecture specs, dataset (dataset.zip), and local algorithms",
+  "constraints": [
+    "Strict peer-review standard without defensive bias",
+    "Actionable remediation for every identified flaw",
+    "Alignment with official Torob 300-point rubric"
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "description": "Rigorous technical audit of systems architecture, memory limits, and latency claims",
+      "required_evidence_kind": "benchmarks and architectural stress analysis",
+      "mandatory": true
+    },
+    {
+      "id": "A2",
+      "description": "Mathematical and algorithmic proof check of all 7 algorithms with complexity bounds",
+      "required_evidence_kind": "formal algorithmic analysis and stress tests",
+      "mandatory": true
+    },
+    {
+      "id": "A3",
+      "description": "Adversarial threat modeling and anti-gaming audit",
+      "required_evidence_kind": "threat models and exploit scenario testing",
+      "mandatory": true
+    },
+    {
+      "id": "A4",
+      "description": "Physical usability and offline fault-tolerance review",
+      "required_evidence_kind": "ux heuristics and offline state verification",
+      "mandatory": true
+    },
+    {
+      "id": "A5",
+      "description": "Systematic claims-trace audit classifying claims into Active, Planned, and Suspected",
+      "required_evidence_kind": "claims.trace gate findings and constructive remediation",
+      "mandatory": true
+    }
+  ],
+  "permitted_actions": [
+    "inspect whitepaper and architecture files",
+    "run claims.trace and sa.py gates",
+    "run python benchmark scripts",
+    "write comprehensive audit report"
+  ],
+  "budget": {
+    "max_attempts": 10,
+    "max_active": 3,
+    "max_seconds": 3600,
+    "max_tokens": null
+  },
+  "stop_policy": {
+    "allowed_answers": [
+      "supported",
+      "conditional",
+      "unresolved",
+      "contradicted"
+    ]
+  },
+  "created_at": "2026-10-22T14:58:00+03:30"
+}

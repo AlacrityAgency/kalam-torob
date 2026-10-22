@@ -1,0 +1,276 @@
+{
+  "gate": "claims.trace",
+  "status": "FAIL",
+  "exit_code": 1,
+  "target": "/Users/dazzle/torob/WHITEPAPER.md",
+  "metrics": {
+    "documents": "WHITEPAPER.md (text)",
+    "claims": 11,
+    "status:absent": 11,
+    "table": [
+      {
+        "claim": "brand_name",
+        "status": "absent",
+        "qualified": "no"
+      },
+      {
+        "claim": "category_name",
+        "status": "absent",
+        "qualified": "no"
+      },
+      {
+        "claim": "image_urls",
+        "status": "absent",
+        "qualified": "no"
+      },
+      {
+        "claim": "in_person",
+        "status": "absent",
+        "qualified": "no"
+      },
+      {
+        "claim": "last_price_changed_at",
+        "status": "absent",
+        "qualified": "no"
+      },
+      {
+        "claim": "location_label",
+        "status": "absent",
+        "qualified": "no"
+      },
+      {
+        "claim": "payment_options",
+        "status": "absent",
+        "qualified": "no"
+      },
+      {
+        "claim": "persian_title",
+        "status": "absent",
+        "qualified": "no"
+      },
+      {
+        "claim": "price_toman",
+        "status": "absent",
+        "qualified": "no"
+      },
+      {
+        "claim": "product_id",
+        "status": "absent",
+        "qualified": "no"
+      },
+      {
+        "claim": "weekly_hours",
+        "status": "absent",
+        "qualified": "no"
+      }
+    ]
+  },
+  "findings": [
+    {
+      "id": "trace-0001",
+      "module": "claims",
+      "rule": "claim-absent",
+      "severity": "P1",
+      "confidence": "verified",
+      "condition": "WHITEPAPER.md: brand_name",
+      "evidence": {
+        "identifier": "brand_name",
+        "close_matches": [],
+        "only_in": []
+      },
+      "impact": "The document presents a metric/feature that does not exist in the production code.",
+      "remediation": "Remove the claim, mark it as planned/removed, or update the name if it was renamed."
+    },
+    {
+      "id": "trace-0002",
+      "module": "claims",
+      "rule": "claim-absent",
+      "severity": "P1",
+      "confidence": "verified",
+      "condition": "WHITEPAPER.md: category_name",
+      "evidence": {
+        "identifier": "category_name",
+        "close_matches": [],
+        "only_in": []
+      },
+      "impact": "The document presents a metric/feature that does not exist in the production code.",
+      "remediation": "Remove the claim, mark it as planned/removed, or update the name if it was renamed."
+    },
+    {
+      "id": "trace-0003",
+      "module": "claims",
+      "rule": "claim-absent",
+      "severity": "P1",
+      "confidence": "verified",
+      "condition": "WHITEPAPER.md: image_urls",
+      "evidence": {
+        "identifier": "image_urls",
+        "close_matches": [],
+        "only_in": []
+      },
+      "impact": "The document presents a metric/feature that does not exist in the production code.",
+      "remediation": "Remove the claim, mark it as planned/removed, or update the name if it was renamed."
+    },
+    {
+      "id": "trace-0004",
+      "module": "claims",
+      "rule": "claim-absent",
+      "severity": "P1",
+      "confidence": "verified",
+      "condition": "WHITEPAPER.md: in_person",
+      "evidence": {
+        "identifier": "in_person",
+        "close_matches": [],
+        "only_in": []
+      },
+      "impact": "The document presents a metric/feature that does not exist in the production code.",
+      "remediation": "Remove the claim, mark it as planned/removed, or update the name if it was renamed."
+    },
+    {
+      "id": "trace-0005",
+      "module": "claims",
+      "rule": "claim-absent",
+      "severity": "P1",
+      "confidence": "verified",
+      "condition": "WHITEPAPER.md: last_price_changed_at",
+      "evidence": {
+        "identifier": "last_price_changed_at",
+        "close_matches": [],
+        "only_in": []
+      },
+      "impact": "The document presents a metric/feature that does not exist in the production code.",
+      "remediation": "Remove the claim, mark it as planned/removed, or update the name if it was renamed."
+    },
+    {
+      "id": "trace-0006",
+      "module": "claims",
+      "rule": "claim-absent",
+      "severity": "P1",
+      "confidence": "verified",
+      "condition": "WHITEPAPER.md: location_label",
+      "evidence": {
+        "identifier": "location_label",
+        "close_matches": [],
+        "only_in": []
+      },
+      "impact": "The document presents a metric/feature that does not exist in the production code.",
+      "remediation": "Remove the claim, mark it as planned/removed, or update the name if it was renamed."
+    },
+    {
+      "id": "trace-0007",
+      "module": "claims",
+      "rule": "claim-absent",
+      "severity": "P1",
+      "confidence": "verified",
+      "condition": "WHITEPAPER.md: payment_options",
+      "evidence": {
+        "identifier": "payment_options",
+        "close_matches": [],
+        "only_in": []
+      },
+      "impact": "The document presents a metric/feature that does not exist in the production code.",
+      "remediation": "Remove the claim, mark it as planned/removed, or update the name if it was renamed."
+    },
+    {
+      "id": "trace-0008",
+      "module": "claims",
+      "rule": "claim-absent",
+      "severity": "P1",
+      "confidence": "verified",
+      "condition": "WHITEPAPER.md: persian_title",
+      "evidence": {
+        "identifier": "persian_title",
+        "close_matches": [],
+        "only_in": []
+      },
+      "impact": "The document presents a metric/feature that does not exist in the production code.",
+      "remediation": "Remove the claim, mark it as planned/removed, or update the name if it was renamed."
+    },
+    {
+      "id": "trace-0009",
+      "module": "claims",
+      "rule": "claim-absent",
+      "severity": "P1",
+      "confidence": "verified",
+      "condition": "WHITEPAPER.md: price_toman",
+      "evidence": {
+        "identifier": "price_toman",
+        "close_matches": [],
+        "only_in": []
+      },
+      "impact": "The document presents a metric/feature that does not exist in the production code.",
+      "remediation": "Remove the claim, mark it as planned/removed, or update the name if it was renamed."
+    },
+    {
+      "id": "trace-0010",
+      "module": "claims",
+      "rule": "claim-absent",
+      "severity": "P1",
+      "confidence": "verified",
+      "condition": "WHITEPAPER.md: product_id",
+      "evidence": {
+        "identifier": "product_id",
+        "close_matches": [],
+        "only_in": []
+      },
+      "impact": "The document presents a metric/feature that does not exist in the production code.",
+      "remediation": "Remove the claim, mark it as planned/removed, or update the name if it was renamed."
+    },
+    {
+      "id": "trace-0011",
+      "module": "claims",
+      "rule": "claim-absent",
+      "severity": "P1",
+      "confidence": "verified",
+      "condition": "WHITEPAPER.md: weekly_hours",
+      "evidence": {
+        "identifier": "weekly_hours",
+        "close_matches": [],
+        "only_in": []
+      },
+      "impact": "The document presents a metric/feature that does not exist in the production code.",
+      "remediation": "Remove the claim, mark it as planned/removed, or update the name if it was renamed."
+    },
+    {
+      "id": "trace-0012",
+      "module": "claims",
+      "rule": "unsupported-performance-claim",
+      "severity": "P2",
+      "confidence": "suspected",
+      "condition": "WHITEPAPER.md",
+      "evidence": {
+        "phrases": [
+          "دقیق"
+        ]
+      },
+      "impact": "The document claims reliability/accuracy but reports no validation numbers (sensitivity, specificity, sample size, error rates).",
+      "remediation": "Add the validation study (data, n, metrics) or soften the claim to what was tested."
+    }
+  ],
+  "notes": [],
+  "artifacts": {
+    "claims_table": "/Users/dazzle/torob/.superagent/runs/r-20261022-145639-34c8a4/0/claims.md"
+  },
+  "provenance": {
+    "python": "3.13.5",
+    "platform": "Darwin",
+    "skill_version": "6.0.0",
+    "command": [
+      "/opt/anaconda3/bin/python3",
+      "/Users/dazzle/Desktop/cv/.antigravity/skills/super/modules/claims/gates/trace.py",
+      "--project",
+      "/Users/dazzle/torob",
+      "--json",
+      "--doc",
+      "WHITEPAPER.md"
+    ],
+    "scope": null,
+    "fingerprint_before": "28f6a526c5c0d8fe",
+    "fingerprint_after": "28f6a526c5c0d8fe"
+  },
+  "timing": {
+    "execution_s": 0.1033,
+    "fingerprint_before_s": 0.5111,
+    "fingerprint_after_s": 0.4271
+  }
+}
