@@ -199,10 +199,15 @@ CREATE TABLE hub_stats (
     location_label TEXT PRIMARY KEY,
     shops_with_offers INTEGER,
     category_only_shops INTEGER,
-    offer_count INTEGER
+    offer_count INTEGER,
+    lat REAL,                 -- مرکز تقریبی محدوده (میانگین مختصات فروشگاه‌ها) برای «موقعیت من»
+    lon REAL
 );
 
 CREATE TABLE suggested_products (rank INTEGER PRIMARY KEY, product_id TEXT);
+
+-- فهرست دسته‌ها تا قوانین مکمل (الگوی LIKE) روی چند صد دسته اجرا شوند، نه روی همه کالاها
+CREATE TABLE categories (category_name TEXT PRIMARY KEY, product_count INTEGER);
 """
 
 
@@ -301,8 +306,12 @@ def build(db_path):
     SELECT location_label,
            sum(offer_count > 0),
            sum(offer_count = 0 AND category_names IS NOT NULL),
-           sum(offer_count)
+           sum(offer_count),
+           avg(lat), avg(lon)
     FROM shops WHERE location_label IS NOT NULL GROUP BY location_label;
+
+    INSERT INTO categories
+    SELECT category_name, count(*) FROM products WHERE category_name IS NOT NULL GROUP BY category_name;
 
     INSERT INTO suggested_products (product_id)
     SELECT product_id FROM product_stats

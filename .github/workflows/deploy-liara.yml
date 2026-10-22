@@ -1,0 +1,40 @@
+# دیپلوی خودکار روی لیارا بعد از هر push به main.
+# پیش‌نیاز: در تنظیمات مخزن، secret با نام LIARA_API_TOKEN (توکن API لیارا) و
+# variable با نام LIARA_APP (نام برنامه در لیارا) بسازید. تا وقتی توکن تنظیم نشده، این مرحله رد می‌شود.
+name: Deploy to Liara
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      LIARA_API_TOKEN: ${{ secrets.LIARA_API_TOKEN }}
+      LIARA_APP: ${{ vars.LIARA_APP || 'kalam-torob' }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.LIARA_API_TOKEN != ''
+      - uses: actions/setup-python@v5
+        if: env.LIARA_API_TOKEN != ''
+        with:
+          python-version: "3.12"
+      - name: Tests (deploy only if green)
+        if: env.LIARA_API_TOKEN != ''
+        run: |
+          pip install -r requirements.txt
+          python -m unittest discover -s tests
+      - uses: actions/setup-node@v4
+        if: env.LIARA_API_TOKEN != ''
+        with:
+          node-version: "20"
+      - name: Deploy
+        if: env.LIARA_API_TOKEN != ''
+        run: |
+          npm install -g @liara/cli
+          liara deploy --app "$LIARA_APP" --api-token "$LIARA_API_TOKEN"
+      - name: Skip (no token)
+        if: env.LIARA_API_TOKEN == ''
+        run: echo "LIARA_API_TOKEN is not set; skipping deploy."

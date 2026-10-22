@@ -3,24 +3,12 @@
 نجات خریدار هنگام مراجعه به مغازه بسته یا مواجهه با اتمام موجودی در کمتر از ۱٫۵ ثانیه.
 """
 
-import math
-
+from .geo import distance_km
 from .hours import hours_status
 from .imwp import parse_mall_address
 
 # سقف کاندیداهای بررسی‌شده؛ لایه‌بندی پس از خواندن همه انجام می‌شود تا مغازه‌های نزدیک اما گران‌تر حذف نشوند
 MAX_CANDIDATES = 500
-
-
-def _distance_km(lat1, lon1, lat2, lon2):
-    """فاصله هاورساین بین دو نقطه (کیلومتر)؛ اگر مختصات ناقص باشد None."""
-    if None in (lat1, lon1, lat2, lon2):
-        return None
-    r = 6371.0
-    p1, p2 = math.radians(lat1), math.radians(lat2)
-    dp, dl = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
-    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
-    return 2 * r * math.asin(math.sqrt(a))
 
 
 def _in_same_mall(base_parsed, base_hub, cand_parsed, cand_hub):
@@ -78,7 +66,7 @@ def find_emergency_fallbacks(db_conn, product_id: str, failed_shop_id: str):
         seen_shops.add(csid)
 
         c_parsed = parse_mall_address(caddr, cloc)
-        distance = _distance_km(slat, slon, clat, clon)
+        distance = distance_km(slat, slon, clat, clon)
 
         candidate_obj = {
             "shop_id": csid,

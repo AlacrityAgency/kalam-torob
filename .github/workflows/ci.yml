@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Unit and API tests
+        run: python -m unittest discover -s tests -v
+      - name: Build sample database and smoke-test the server
+        run: |
+          python scripts/generate_sample_dataset.py
+          python scripts/build_db.py
+          python -m uvicorn backend.main:app --port 8000 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8000/api/health && break; sleep 1; done
+          curl -sf "http://127.0.0.1:8000/api/search?q=%DA%AF%D9%88%D8%B4%DB%8C" > /dev/null
+          curl -sf http://127.0.0.1:8000/ > /dev/null

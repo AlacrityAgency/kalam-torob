@@ -38,6 +38,9 @@ from backend.algorithms.svdp import compute_stock_certainty, generate_inquiry_do
 from backend.algorithms.textutil import days_since, has_word  # noqa: E402
 from backend.algorithms.tfra import find_emergency_fallbacks  # noqa: E402
 from backend.nlu import local_extract, parse_budget  # noqa: E402
+from backend.agent import follow_up  # noqa: E402
+from backend.algorithms.hours import common_open_window  # noqa: E402
+from backend.algorithms.recommend import rank_offers  # noqa: E402
 from backend.search import search_products, tokenize  # noqa: E402
 
 RECENT = (datetime.now(timezone.utc) - timedelta(days=3)).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -433,6 +436,76 @@ class AssistantTests(unittest.TestCase):
     def test_accessory_not_shown_as_phone(self):
         r = self.assistant.process_message("گوشی A55 تا ۱۵ میلیون")
         self.assertEqual(r["products"], [])
+
+
+class LocationAndRecommendationTests(unittest.TestCase):
+    def setUp(self):
+        self.conn = make_db()
+
+    def test_search_reports_nearest_distance_and_max_km(self):
+        p = next(p for p in search_products(self.conn, ["گوشی"], user_lat=35.76, user_lon=51.43))
+        self.assertLess(p["nearest_km"], 0.1)  # s4 دقیقاً در همین نقطه است
+        far = search_products(self.conn, ["دریل"], user_lat=35.69, user_lon=51.41, max_km=1)
+        self.assertEqual([x["available_offline_shops_count"] for x in far], [1])
+
+    def test_recommendation_prefers_cheap_near_open_and_explains(self):
+        offers = [
+            {"offer_id": "a", "price_toman": 100, "distance_km": 8.0, "hours_state": "closed", "days_since_update": 90},
+            {"offer_id": "b", "price_toman": 105, "distance_km": 0.4, "hours_state": "open", "days_since_update": 2},
+            {"offer_id": "c", "price_toman": 10, "is_copy": True, "distance_km": 0.1, "hours_state": "open", "days_since_update": 1},
+        ]
+        r = rank_offers(offers)
+        self.assertEqual(r["offer_id"], "b")
+        self.assertTrue(any("نزدیک‌ترین" in x for x in r["reasons"]))
+        self.assertTrue(any("الان باز" in x for x in r["reasons"]))
+        self.assertNotIn("c", r["scores"])  # آفر کپی رتبه‌بندی نمی‌شود
+
+    def test_recommendation_without_location_ignores_distance(self):
+        r = rank_offers([{"offer_id": "a", "price_toman": 100}, {"offer_id": "b", "price_toman": 200}])
+        self.assertEqual(r["offer_id"], "a")
+        self.assertFalse(r["used_distance"])
+
+    def test_product_api_returns_distance_and_recommendation(self):
+        d = main.get_product_details("p1", hub=None, lat=35.69, lon=51.41, conn=make_db())
+        self.assertIsNotNone(d["recommendation"])
+        s1 = next(o for o in d["offers"] if o["shop"]["shop_id"] == "s1")
+        self.assertLess(s1["distance_km"], 0.1)
+
+    def test_nearest_in_chat(self):
+        r = KalamAssistant(make_db()).process_message("نزدیک‌ترین گوشی سامسونگ", {"user_lat": 35.76, "user_lon": 51.43})
+        self.assertEqual(r["products"][0]["best_shop"]["shop_id"], "s4")
+
+
+class VisitAndFollowUpTests(unittest.TestCase):
+    def test_common_window(self):
+        sat_15 = datetime(2026, 10, 24, 15, 0, tzinfo=TEHRAN_TZ)
+        a = '{"saturday": "10:00-14:00, 16:00-21:00", "sunday": "10-20"}'
+        b = '{"saturday": "09:00-18:00", "sunday": "09:00-18:00"}'
+        r = common_open_window([a, b, "{}"], sat_15)
+        self.assertTrue(r["found"])
+        self.assertIn("امروز از ۱۶:۰۰ تا ۱۸:۰۰", r["label"])
+        self.assertEqual(r["unknown_count"], 1)
+        self.assertFalse(common_open_window(["{}"])["found"])
+
+    def test_route_has_visit_plan(self):
+        r = InPersonCartRouter(make_db()).solve_cart(["p1"])
+        self.assertIn("visit_plan", r)
+
+    def test_follow_up_decision_and_alternatives(self):
+        conn = make_db()
+        r = follow_up(conn, "o6c")  # آفر کپی
+        self.assertTrue(r["simulated"])
+        self.assertEqual(r["decision"]["action"], "alternative")
+        self.assertTrue(r["alternatives"])
+        r = follow_up(conn, "o9")   # s3 همیشه باز، اینستاگرام واقعی
+        self.assertIn("instagram", [c["type"] for c in r["contact_channels"]])
+        self.assertEqual(r["steps"][0]["status"], "ok")
+        self.assertIsNone(follow_up(conn, "missing"))
+
+    def test_visit_intent(self):
+        r = KalamAssistant(make_db()).process_message("کی برم که همه باز باشن؟", {"cart_product_ids": ["p1"]})
+        self.assertEqual(r["type"], "cart_route")
+        self.assertIn("بهترین زمان مراجعه", r["message"])
 
 
 if __name__ == "__main__":

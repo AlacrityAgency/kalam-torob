@@ -8,6 +8,9 @@ const API = "";
 const LS_CART = "kalam_cart_v2";
 const LS_HUB = "kalam_hub";
 const LS_ROUTE = "kalam_route_cache";
+const LS_LOC = "kalam_location";
+const LS_COMPARE = "kalam_compare";
+const MAX_COMPARE = 4;
 
 const CATEGORY_LINKS = [
   ["گوشی موبایل", "گوشی موبایل"],
@@ -66,6 +69,8 @@ const CHAT_PROMPTS = [
   "جمعه کدوم مغازه‌ها بازن؟",
   "فروشگاه‌های دارای اقساط اسنپ پی",
   "مسیر خرید سبدم رو بچین",
+  "کی برم که همه مغازه‌ها باز باشن؟",
+  "نزدیک‌ترین ایرپاد",
 ];
 
 const ICONS = {
@@ -158,6 +163,18 @@ function creditTags(providers) {
   }).join("");
 }
 
+function kmText(km) {
+  if (km === null || km === undefined) return "";
+  if (km < 1) return `${faNum(Math.round(km * 100) * 10)} متر`;
+  return `${Number(km).toLocaleString("fa-IR", { maximumFractionDigits: 1 })} کیلومتر`;
+}
+
+function mapLink(lat, lon) {
+  if (lat === null || lat === undefined || lon === null || lon === undefined) return "";
+  const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(lat)},${encodeURIComponent(lon)}`;
+  return `<a class="btn-link" href="${esc(url)}" target="_blank" rel="noopener">${small(ICONS.pin)} مسیریابی در نقشه</a>`;
+}
+
 function hoursHtml(h) {
   if (!h) return "";
   const cls = { open: "dot-high", closed: "dot-low" }[h.state] || "dot-medium";
@@ -231,11 +248,15 @@ class KalamApp {
     // حافظه گفتگو: وضعیت جستجوی قبلی که سرور برگردانده و با پیام بعدی فرستاده می‌شود
     this.chatState = null;
     this.tree = null;
+    this.loc = readStore(LS_LOC, null);
+    this.compare = readStore(LS_COMPARE, []);
 
     this.renderCategoryNav();
     this.bindGlobal();
     this.updateCartBadge();
     this.renderHubLabel();
+    this.renderLocLabel();
+    this.updateCompareBadge();
     this.renderChatPrompts();
     this.loadHubs();
     this.loadHealth();
@@ -322,6 +343,15 @@ class KalamApp {
         case "save-route": this.saveRouteOffline(); break;
         case "chat-prompt": this.sendChat(d.text); break;
         case "go": this.closeModal(); this.go(d.href); break;
+        case "open-location": this.showLocationModal(); break;
+        case "loc-gps": this.useGps(); break;
+        case "loc-area": this.setLocation({ lat: Number(d.lat), lon: Number(d.lon), label: d.label, source: "area" }); break;
+        case "loc-clear": this.setLocation(null); break;
+        case "seller-sort": this.sellerFilter.sort = d.sort; this.renderSellers(); break;
+        case "max-km": this.searchState.maxKm = d.km ? Number(d.km) : null; this.renderSearch(this.searchQuery); break;
+        case "toggle-compare": this.toggleCompare(d.id); break;
+        case "remove-compare": this.toggleCompare(d.id); this.renderCompare(); break;
+        case "follow-up": this.runFollowUp(d.offer, d.product, d.shop, d.shopName); break;
       }
     });
   }
@@ -348,6 +378,7 @@ class KalamApp {
     if (path === "/search") return this.renderSearch(params.get("q") || "");
     if (path.startsWith("/product/")) return this.renderProduct(decodeURIComponent(path.slice(9)));
     if (path === "/cart") return this.renderCart();
+    if (path === "/compare") return this.renderCompare();
     if (path === "/about") return this.renderAbout();
     return this.renderHome();
   }
@@ -428,6 +459,166 @@ class KalamApp {
     if (hash.startsWith("/search") || hash.startsWith("/product/") || hash === "/cart") this.route();
   }
 
+  /* ---------- Compare ---------- */
+
+  updateCompareBadge() {
+    const n = this.compare.length;
+    document.getElementById("compare-count").textContent = faNum(n);
+    document.getElementById("compare-link").hidden = n === 0;
+  }
+
+  toggleCompare(id) {
+    id = String(id);
+    if (this.compare.includes(id)) {
+      this.compare = this.compare.filter((x) => x !== id);
+    } else {
+      if (this.compare.length >= MAX_COMPARE) {
+        this.toast(`حداکثر ${faNum(MAX_COMPARE)} کالا را می‌توان مقایسه کرد.`, "error");
+        return;
+      }
+      this.compare.push(id);
+      this.toast(this.compare.length > 1 ? "به مقایسه اضافه شد؛ از دکمه «مقایسه» در بالای صفحه ببینید." : "به مقایسه اضافه شد؛ یک کالای دیگر هم انتخاب کنید.", "success");
+    }
+    writeStore(LS_COMPARE, this.compare);
+    this.updateCompareBadge();
+    const on = this.compare.includes(id);
+    document.querySelectorAll(`[data-action="toggle-compare"][data-id="${CSS.escape(id)}"]`).forEach((b) => {
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-pressed", String(on));
+      b.textContent = b.classList.contains("compare-toggle-hero") ? (on ? "✓ در فهرست مقایسه" : "+ مقایسه با کالای دیگر") : (on ? "✓ در مقایسه" : "+ مقایسه");
+    });
+  }
+
+  async renderCompare() {
+    const seq = this.renderSeq;
+    if (!this.compare.length) {
+      this.setView(`<div class="container" style="padding-top:24px"><div class="panel empty">${ICONS.box}<strong>کالایی برای مقایسه انتخاب نشده</strong>
+        <div>در نتایج جستجو یا صفحه کالا دکمه «+ مقایسه» را بزنید (حداکثر ${faNum(MAX_COMPARE)} کالا).</div>
+        <div style="margin-top:16px"><a class="btn btn-primary" href="#/">جستجوی کالا</a></div></div></div>`, "مقایسه کالاها");
+      return;
+    }
+    this.setView(`<div class="container" style="padding-top:24px"><div class="panel panel-body"><div class="skeleton" style="height:240px"></div></div></div>`, "مقایسه کالاها");
+    const q = this.locQuery();
+    const results = await Promise.all(this.compare.map((id) =>
+      getJSON(`/api/product/${encodeURIComponent(id)}${q ? `?${q}` : ""}`).catch(() => null)));
+    if (this.isStale(seq)) return;
+    const items = results.filter(Boolean).map((d) => {
+      const offers = d.offers || [];
+      const priced = offers.filter((o) => o.price_toman && !o.is_copy && !o.price_suspect);
+      const dists = priced.map((o) => o.distance_km).filter((x) => x !== null && x !== undefined);
+      const ages = priced.map((o) => o.stock_certainty.days_since_update).filter((x) => x !== null && x !== undefined);
+      const rec = d.recommendation && offers.find((o) => o.offer_id === d.recommendation.offer_id);
+      return {
+        p: d.product,
+        shops: new Set(priced.map((o) => o.shop.shop_id)).size,
+        openNow: new Set(priced.filter((o) => o.shop.hours.state === "open").map((o) => o.shop.shop_id)).size,
+        credit: new Set(priced.filter((o) => o.shop.credit_info.has_credit).map((o) => o.shop.shop_id)).size,
+        nearest: dists.length ? Math.min(...dists) : null,
+        freshest: ages.length ? Math.min(...ages) : null,
+        rec,
+      };
+    });
+
+    // بهترین مقدار هر ردیف عددی برجسته می‌شود
+    const best = (vals, fn) => { const v = vals.filter((x) => x !== null && x !== undefined); return v.length ? fn(...v) : null; };
+    const minPrice = best(items.map((i) => i.p.min_price), Math.min);
+    const maxShops = best(items.map((i) => i.shops), Math.max);
+    const minNear = best(items.map((i) => i.nearest), Math.min);
+    const maxOpen = best(items.map((i) => i.openNow), Math.max);
+    const mark = (cond) => (cond ? ' class="best"' : "");
+
+    const specNames = [];
+    items.forEach((i) => (i.p.specs || []).forEach((sp) => { if (!specNames.includes(sp.name)) specNames.push(sp.name); }));
+    const specVal = (i, name) => { const f = (i.p.specs || []).find((sp) => sp.name === name); return f ? esc(f.value) : '<span class="faint">ثبت نشده</span>'; };
+
+    const row = (label, cells) => `<tr><th scope="row">${label}</th>${cells.join("")}</tr>`;
+    this.setView(`
+      <div class="container">
+        <nav class="breadcrumb" aria-label="مسیر صفحه"><a href="#/">کَلَم</a><span>/</span><span>مقایسه کالاها</span></nav>
+        <section class="panel">
+          <div class="panel-head">
+            <h2>مقایسه ${faNum(items.length)} کالا</h2>
+            <span class="faint" style="font-size:12px">بهترین مقدار هر ردیف سبز است · قیمت‌ها از آفرهای معتبر (بدون کپی و قیمت غیرعادی)</span>
+          </div>
+          <div class="compare-scroll">
+            <table class="compare-table">
+              <thead><tr><th></th>${items.map((i) => `
+                <th scope="col">
+                  ${thumbHtml(i.p.image_url, i.p.title)}
+                  <a href="#/product/${encodeURIComponent(i.p.product_id)}" class="compare-title">${esc(i.p.title)}</a>
+                  <button type="button" class="btn-link" data-action="remove-compare" data-id="${esc(i.p.product_id)}">حذف</button>
+                </th>`).join("")}</tr></thead>
+              <tbody>
+                ${row("کمترین قیمت حضوری", items.map((i) => `<td${mark(i.p.min_price && i.p.min_price === minPrice)}>${i.p.min_price ? `${faNum(i.p.min_price)} تومان` : '<span class="faint">نامشخص</span>'}</td>`))}
+                ${row("بازه قیمت", items.map((i) => `<td>${i.p.min_price && i.p.max_price && i.p.max_price !== i.p.min_price ? `${faNum(i.p.min_price)} تا ${faNum(i.p.max_price)}` : "—"}</td>`))}
+                ${row("فروشگاه حضوری", items.map((i) => `<td${mark(i.shops === maxShops && i.shops > 0)}>${faNum(i.shops)} فروشگاه</td>`))}
+                ${row("الان باز", items.map((i) => `<td${mark(i.openNow === maxOpen && i.openNow > 0)}>${faNum(i.openNow)} فروشگاه</td>`))}
+                ${row("خرید اقساطی", items.map((i) => `<td>${i.credit ? `${faNum(i.credit)} فروشگاه` : '<span class="faint">ندارد</span>'}</td>`))}
+                ${row("نزدیک‌ترین فروشگاه", items.map((i) => `<td${mark(i.nearest !== null && i.nearest === minNear)}>${i.nearest !== null ? kmText(i.nearest) : `<span class="faint">${this.loc ? "نامشخص" : "موقعیت تعیین نشده"}</span>`}</td>`))}
+                ${row("تازه‌ترین قیمت", items.map((i) => `<td>${esc(freshnessText(i.freshest))}</td>`))}
+                ${row("برند", items.map((i) => `<td>${i.p.brand ? esc(i.p.brand) : '<span class="faint">ثبت نشده</span>'}</td>`))}
+                ${row("پیشنهاد کلم", items.map((i) => `<td>${i.rec ? `${esc(i.rec.shop.name)}<br><small class="faint">${faNum(i.rec.price_toman)} تومان · ${esc(i.rec.shop.parsed_address.mall_name)}</small>` : "—"}</td>`))}
+                ${specNames.length ? `<tr class="compare-section"><th colspan="${items.length + 1}">مشخصات فنی</th></tr>` : ""}
+                ${specNames.map((n) => row(esc(n), items.map((i) => `<td>${specVal(i, n)}</td>`))).join("")}
+                ${row("", items.map((i) => `<td>${this.cart.some((c) => c.id === String(i.p.product_id))
+                  ? `<a class="btn btn-outline btn-sm" href="#/cart">در سبد</a>`
+                  : `<button type="button" class="btn btn-primary btn-sm" data-action="add-cart" data-id="${esc(i.p.product_id)}">افزودن به سبد</button>`}</td>`))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>`, "مقایسه کالاها");
+    items.forEach((i) => { this.productCache[i.p.product_id] = { id: i.p.product_id, title: i.p.title, price: i.p.min_price, image: i.p.image_url }; });
+  }
+
+  /* ---------- Location ---------- */
+
+  locQuery() {
+    return this.loc ? `lat=${this.loc.lat}&lon=${this.loc.lon}` : "";
+  }
+
+  renderLocLabel() {
+    const label = document.getElementById("loc-label");
+    label.textContent = this.loc ? (this.loc.source === "gps" ? "موقعیت من" : `نزدیک ${this.loc.label}`) : "موقعیت من";
+    document.getElementById("loc-btn").classList.toggle("active", !!this.loc);
+  }
+
+  showLocationModal() {
+    const areas = this.hubs.filter((h) => h.lat && h.lon);
+    this.openModal("موقعیت شما", `
+      <p class="muted" style="margin-top:0;font-size:13px">با موقعیت شما، فاصله هر فروشگاه نشان داده می‌شود و می‌توانید نتایج را بر اساس نزدیکی مرتب کنید. موقعیت فقط در مرورگر خودتان ذخیره می‌شود.</p>
+      <button type="button" class="btn btn-primary btn-block" data-action="loc-gps">${ICONS.pin} استفاده از موقعیت فعلی (GPS)</button>
+      <div class="field-label" style="margin:16px 0 8px">یا محدوده‌ای که در آن هستید:</div>
+      <div class="loc-areas">
+        ${areas.map((h) => `<button type="button" class="chip ${this.loc && this.loc.label === h.name ? "active" : ""}" data-action="loc-area" data-lat="${esc(h.lat)}" data-lon="${esc(h.lon)}" data-label="${esc(h.name)}">${esc(h.name)}</button>`).join("") || '<span class="faint">محدوده‌ای با مختصات ثبت‌شده نیست.</span>'}
+      </div>
+      ${this.loc ? `<button type="button" class="btn-link" style="margin-top:14px" data-action="loc-clear">حذف موقعیت</button>` : ""}
+      <p class="faint" style="font-size:11px;margin:12px 0 0">موقعیت محدوده، مرکز تقریبی فروشگاه‌های آن محدوده است.</p>`);
+  }
+
+  useGps() {
+    if (!navigator.geolocation) {
+      this.toast("مرورگر شما موقعیت‌یابی را پشتیبانی نمی‌کند؛ یک محدوده انتخاب کنید.", "error");
+      return;
+    }
+    this.toast("در حال گرفتن موقعیت…");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => this.setLocation({ lat: +pos.coords.latitude.toFixed(5), lon: +pos.coords.longitude.toFixed(5), label: "موقعیت فعلی", source: "gps" }),
+      () => this.toast("دسترسی به موقعیت داده نشد؛ یک محدوده انتخاب کنید.", "error"),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
+    );
+  }
+
+  setLocation(loc) {
+    this.loc = loc;
+    writeStore(LS_LOC, loc);
+    this.renderLocLabel();
+    this.closeModal();
+    this.toast(loc ? "موقعیت ثبت شد؛ فاصله فروشگاه‌ها نمایش داده می‌شود." : "موقعیت حذف شد.", loc ? "success" : "");
+    const hash = location.hash.replace(/^#/, "");
+    if (hash.startsWith("/search") || hash.startsWith("/product/") || hash.startsWith("/compare")) this.route();
+  }
+
   /* ---------- Home ---------- */
 
   async renderHome() {
@@ -496,13 +687,18 @@ class KalamApp {
   productCardHtml(p) {
     const title = p.persian_title || p.title || "";
     const shops = p.available_offline_shops_count || 0;
+    const inCompare = this.compare.includes(String(p.product_id));
     return `
+      <div class="product-card-wrap">
       <a class="product-card" href="#/product/${encodeURIComponent(p.product_id)}">
         ${thumbHtml(p.image_url, title)}
         <h3 class="product-title">${esc(title)}</h3>
         <div class="product-price">${priceHtml(p.min_price_toman, shops > 1)}</div>
         <div class="product-shops">${shops ? `در ${faNum(shops)} فروشگاه حضوری` : "فروشگاه حضوری ندارد"}</div>
-      </a>`;
+        ${p.nearest_km !== null && p.nearest_km !== undefined ? `<div class="product-shops">${small(ICONS.pin)} نزدیک‌ترین: ${kmText(p.nearest_km)}</div>` : ""}
+      </a>
+      <button type="button" class="compare-toggle ${inCompare ? "active" : ""}" data-action="toggle-compare" data-id="${esc(p.product_id)}" aria-pressed="${inCompare}">${inCompare ? "✓ در مقایسه" : "+ مقایسه"}</button>
+      </div>`;
   }
 
   skeletonCards(n) {
@@ -554,6 +750,11 @@ class KalamApp {
     if (Number(st.minPrice) > 0) params.set("min_price", String(Number(st.minPrice)));
     if (Number(st.maxPrice) > 0) params.set("max_price", String(Number(st.maxPrice)));
     Object.entries(st.conditions).forEach(([k, v]) => { if (v) params.set(k, "true"); });
+    if (this.loc) {
+      params.set("lat", String(this.loc.lat));
+      params.set("lon", String(this.loc.lon));
+      if (st.maxKm) params.set("max_km", String(st.maxKm));
+    }
     try {
       const data = await getJSON(`/api/search?${params}`);
       if (this.isStale(seq)) return;
@@ -578,12 +779,14 @@ class KalamApp {
     if (s.sort === "cheap") items.sort(byPrice);
     if (s.sort === "expensive") items.sort((a, b) => (b.min_price_toman || 0) - (a.min_price_toman || 0));
     if (s.sort === "shops") items.sort((a, b) => (b.available_offline_shops_count || 0) - (a.available_offline_shops_count || 0));
+    if (s.sort === "nearest") items.sort((a, b) => (a.nearest_km ?? Infinity) - (b.nearest_km ?? Infinity));
 
     const active = CONDITIONS.filter(([k]) => s.conditions[k]).map(([, l]) => l);
     const budget = [Number(s.minPrice) > 0 ? `از ${faNum(s.minPrice)}` : "", Number(s.maxPrice) > 0 ? `تا ${faNum(s.maxPrice)} تومان` : ""].filter(Boolean).join(" ");
     const summary = [this.hub ? `در ${this.hub}` : "", budget, ...active].filter(Boolean).join("، ");
 
     const sorts = [["relevant", "مرتبط‌ترین"], ["cheap", "ارزان‌ترین"], ["expensive", "گران‌ترین"], ["shops", "بیشترین فروشگاه"]];
+    if (this.loc) sorts.splice(2, 0, ["nearest", "نزدیک‌ترین"]);
     const head = document.getElementById("results-head");
     if (!head) return;
     head.innerHTML = `
@@ -612,6 +815,16 @@ class KalamApp {
           <input type="number" inputmode="numeric" min="0" step="100000" name="max" placeholder="تا" value="${esc(s.maxPrice)}" aria-label="حداکثر قیمت">
           <button type="submit" class="btn btn-ghost btn-sm" style="grid-column:1/-1">اعمال بودجه</button>
         </form>
+      </div>
+      <div class="filter-group">
+        <h3>فاصله از شما</h3>
+        ${this.loc ? `
+          <div class="km-options">
+            ${[["", "همه"], ["2", "تا ۲ کیلومتر"], ["5", "تا ۵ کیلومتر"], ["10", "تا ۱۰ کیلومتر"]].map(([k, l]) =>
+              `<button type="button" class="chip ${(s.maxKm || "") == k ? "active" : ""}" data-action="max-km" data-km="${k}">${l}</button>`).join("")}
+          </div>
+          <p class="faint" style="font-size:11px;margin:8px 0 0">از ${esc(this.loc.source === "gps" ? "موقعیت فعلی" : this.loc.label)}</p>`
+        : `<button type="button" class="btn btn-ghost btn-sm btn-block" data-action="open-location">${small(ICONS.pin)} تعیین موقعیت من</button>`}
       </div>
       <div class="filter-group">
         <h3>محدوده</h3>
@@ -649,7 +862,8 @@ class KalamApp {
     const seq = this.renderSeq;
     this.setView(`<div class="container"><div style="height:16px"></div><div class="panel product-hero"><div class="product-thumb skeleton"></div><div><div class="skeleton" style="height:18px;margin-bottom:12px"></div><div class="skeleton" style="height:18px;width:60%"></div></div></div></div>`);
     let data, comp;
-    const hubParam = this.hub ? `?hub=${encodeURIComponent(this.hub)}` : "";
+    const qs = [this.hub ? `hub=${encodeURIComponent(this.hub)}` : "", this.locQuery()].filter(Boolean).join("&");
+    const hubParam = qs ? `?${qs}` : "";
     try {
       [data, comp] = await Promise.all([
         getJSON(`/api/product/${encodeURIComponent(id)}${hubParam}`),
@@ -672,7 +886,8 @@ class KalamApp {
 
     // محدوده انتخاب‌شده در هدر، اگر آفری در آن هست، فیلتر پیش‌فرض فروشگاه‌هاست
     const hubHasOffers = this.hub && offers.some((o) => this.placeMatches(this.hub, o.shop));
-    this.sellerFilter = { hub: hubHasOffers ? this.hub : null, conditions: {} };
+    this.recommendation = data.recommendation;
+    this.sellerFilter = { hub: hubHasOffers ? this.hub : null, conditions: {}, sort: data.recommendation ? "recommended" : "cheap" };
 
     const specs = p.specs || [];
     const categoryOnly = data.category_only_shops || [];
@@ -705,6 +920,7 @@ class KalamApp {
                 ? `<a class="btn btn-outline" href="#/cart">${ICONS.cart} در سبد حضوری است؛ مشاهده مسیر</a>`
                 : `<button type="button" class="btn btn-primary" data-action="add-cart" data-id="${esc(id)}">${ICONS.cart} افزودن به سبد خرید حضوری</button>`}
               <a class="btn btn-ghost" href="#sellers">مقایسه فروشگاه‌ها</a>
+              <button type="button" class="btn btn-ghost compare-toggle-hero ${this.compare.includes(String(id)) ? "active" : ""}" data-action="toggle-compare" data-id="${esc(id)}">${this.compare.includes(String(id)) ? "✓ در فهرست مقایسه" : "+ مقایسه با کالای دیگر"}</button>
             </div>
           </div>
         </section>
@@ -714,7 +930,9 @@ class KalamApp {
             <h2>فروشگاه‌های حضوری</h2>
             <span class="faint" style="font-size:12px" id="seller-count"></span>
           </div>
+          ${this.recommendationHtml(data.recommendation, offers, p)}
           <div class="seller-filters" id="seller-filters"></div>
+          <div class="seller-sort" id="seller-sort"></div>
           <div id="seller-list"></div>
         </section>
 
@@ -789,6 +1007,16 @@ class KalamApp {
     const offers = this.currentOffers || [];
     const byCond = offers.filter((o) => this.offerPasses(o, f.conditions));
     const shown = byCond.filter((o) => this.placeMatches(f.hub, o.shop));
+    const scores = (this.recommendation && this.recommendation.scores) || {};
+    const priceOf = (o) => o.price_toman || Infinity;
+    if (f.sort === "cheap") shown.sort((a, b) => priceOf(a) - priceOf(b));
+    if (f.sort === "nearest") shown.sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity));
+    if (f.sort === "recommended") shown.sort((a, b) => (scores[b.offer_id] ?? -1) - (scores[a.offer_id] ?? -1) || priceOf(a) - priceOf(b));
+    const sorts = [["recommended", "پیشنهاد کلم"], ["cheap", "ارزان‌ترین"]];
+    if (this.loc) sorts.push(["nearest", "نزدیک‌ترین"]);
+    document.getElementById("seller-sort").innerHTML = `<span>مرتب‌سازی:</span>` + sorts.map(([k, l]) =>
+      `<button type="button" class="${f.sort === k ? "active" : ""}" data-action="seller-sort" data-sort="${k}">${l}</button>`).join("") +
+      (this.loc ? "" : `<button type="button" class="btn-link" data-action="open-location">${small(ICONS.pin)} برای مرتب‌سازی بر اساس فاصله، موقعیتتان را تعیین کنید</button>`);
 
     const hubCounts = {};
     byCond.forEach((o) => { const h = o.shop.location_label || "سایر"; hubCounts[h] = (hubCounts[h] || 0) + 1; });
@@ -807,6 +1035,33 @@ class KalamApp {
     list.innerHTML = shown.length
       ? shown.map((o) => this.sellerRowHtml(o, this.currentProduct)).join("")
       : this.emptyHtml("با این شرایط فروشگاهی نیست", "یکی از شرط‌ها یا محدوده را بردارید.");
+  }
+
+  recommendationHtml(rec, offers, product) {
+    if (!rec) return "";
+    const o = offers.find((x) => x.offer_id === rec.offer_id);
+    if (!o) return "";
+    const s = o.shop;
+    return `
+      <div class="rec-card">
+        <div class="rec-head">
+          <span class="tag tag-red">پیشنهاد کَلَم</span>
+          <strong>${esc(s.name)}</strong>
+          <span class="rec-price">${faNum(o.price_toman)} <small>تومان</small></span>
+        </div>
+        <div class="seller-loc">${locationLine(s.parsed_address, s.location_label)}</div>
+        <div class="rec-why">
+          <span class="faint">چرا این فروشگاه؟</span>
+          ${rec.reasons.map((r) => `<span class="tag tag-green">✓ ${esc(r)}</span>`).join("")}
+          ${(rec.cautions || []).map((r) => `<span class="tag tag-amber">! ${esc(r)}</span>`).join("")}
+        </div>
+        <div class="rec-actions">
+          <button type="button" class="btn btn-primary btn-sm" data-action="wayfinding" data-shop="${esc(s.shop_id)}">${ICONS.route} مسیر تا مغازه</button>
+          <button type="button" class="btn btn-outline btn-sm" data-action="follow-up" data-offer="${esc(o.offer_id)}" data-product="${esc(product.product_id)}" data-shop="${esc(s.shop_id)}" data-shop-name="${esc(s.name)}">${ICONS.phone} پیگیری خودکار با فروشنده</button>
+          ${mapLink(s.lat, s.lon)}
+        </div>
+        <p class="faint rec-note">امتیاز از ترکیب قیمت، ${rec.used_distance ? "فاصله از شما، " : ""}باز بودن و تازگی قیمت؛ آفرهای غیراصل و قیمت‌های غیرعادی در رتبه‌بندی نیستند. موجودی تأیید نشده است.</p>
+      </div>`;
   }
 
   toggleSellerCondition(key) {
@@ -840,6 +1095,7 @@ class KalamApp {
             <span><span class="dot dot-${esc(level)}"></span>${esc(freshnessText(sc.days_since_update))} · ${esc(sc.badge ? sc.badge.label : "")}</span>
             ${hoursHtml(s.hours)}
             <span>${small(ICONS.shield)} ${clean(o.warranty) ? esc(o.warranty) : "گارانتی ثبت نشده"}</span>
+            ${o.distance_km !== null && o.distance_km !== undefined ? `<span>${small(ICONS.pin)} ${kmText(o.distance_km)} از شما</span>` : ""}
           </div>
           <div class="seller-tags">${providers.length ? creditTags(providers) : '<span class="faint">خرید اقساطی ثبت نشده</span>'}</div>
         </div>
@@ -847,8 +1103,10 @@ class KalamApp {
           <div class="seller-price">${o.price_toman ? `${faNum(o.price_toman)} <small>تومان</small>` : '<small>قیمت ثبت نشده</small>'}</div>
           <div class="seller-actions">
             <button type="button" class="btn btn-outline btn-sm" data-action="wayfinding" data-shop="${esc(s.shop_id)}">${ICONS.route} مسیر تا مغازه</button>
-            <button type="button" class="btn btn-ghost btn-sm" data-action="dossier" data-shop="${esc(s.shop_id)}" data-offer="${esc(o.offer_id)}" data-product="${esc(product.title)}" data-price="${esc(o.price_toman || 0)}">${ICONS.phone} استعلام</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-action="follow-up" data-offer="${esc(o.offer_id)}" data-product="${esc(product.product_id)}" data-shop="${esc(s.shop_id)}" data-shop-name="${esc(s.name)}">${ICONS.phone} پیگیری با فروشنده</button>
+            <button type="button" class="btn-link" data-action="dossier" data-shop="${esc(s.shop_id)}" data-offer="${esc(o.offer_id)}" data-product="${esc(product.title)}" data-price="${esc(o.price_toman || 0)}">متن تماس و شبیه‌ساز</button>
             <button type="button" class="btn-link" data-action="panic" data-product="${esc(product.product_id)}" data-shop="${esc(s.shop_id)}" data-shop-name="${esc(s.name)}">${small(ICONS.alert)} بسته بود؟</button>
+            ${mapLink(s.lat, s.lon)}
           </div>
         </div>
       </div>`;
@@ -940,6 +1198,63 @@ class KalamApp {
       ${phone ? `<p class="faint" style="font-size:12px;margin:10px 0 0">شماره‌های تماس در دیتاست آزمایشی ترب ساختگی‌اند و ممکن است به فروشگاه واقعی وصل نشوند.</p>` : ""}`;
   }
 
+  async runFollowUp(offerId, productId, shopId, shopName) {
+    this.activeShopId = shopId;
+    this.activeProductId = productId || this.activeProductId;
+    this.openModal(`پیگیری با ${shopName || "فروشنده"}`, `<div class="skeleton" style="height:160px"></div>`);
+    let r;
+    try {
+      r = await postJSON("/api/agent/follow-up", { offer_id: offerId });
+    } catch (e) {
+      document.getElementById("modal-body").innerHTML = this.errorHtml();
+      return;
+    }
+    const body = document.getElementById("modal-body");
+    const icon = { ok: "✓", warn: "!", bad: "✕" };
+    body.innerHTML = `
+      <p class="sandbox-note" style="margin-top:0">ایجنت کَلَم مراحل پیگیری را به ترتیب انجام می‌دهد. <span class="tag tag-amber">شبیه‌سازی</span> شماره‌های دیتاست ساختگی‌اند و پاسخ‌ها از داده‌های ثبت‌شده همین آفر ساخته می‌شوند.</p>
+      <ol class="followup-steps" id="followup-steps"></ol>
+      <div id="followup-decision"></div>`;
+    const list = document.getElementById("followup-steps");
+    // نمایش مرحله‌به‌مرحله تا کاربر روند پیگیری را ببیند
+    for (const st of r.steps) {
+      if (!document.getElementById("followup-steps")) return;
+      list.insertAdjacentHTML("beforeend", `
+        <li><span class="st ${st.status}">${icon[st.status] || "•"}</span>
+          <div><strong>${esc(st.label)}</strong>${st.question ? `<div class="faint">ایجنت: ${esc(st.question)}</div>` : ""}<div>${esc(st.text)}</div></div>
+        </li>`);
+      await new Promise((res) => setTimeout(res, 350));
+    }
+    const d = r.decision;
+    const cls = { go: "tag-green", call_first: "tag-amber", alternative: "tag-red" }[d.action] || "tag-gray";
+    const decision = document.getElementById("followup-decision");
+    if (!decision) return;
+    decision.innerHTML = `
+      <div class="visit-plan">
+        <strong><span class="tag ${cls}">${esc(d.label)}</span></strong>
+        <div>${esc(d.text)}</div>
+      </div>
+      ${(r.alternatives || []).map((f) => `
+        <div class="fallback-row">
+          <div style="min-width:0">
+            <div class="seller-name">${esc(f.name)} <span class="tag tag-gray">${esc(f.tier_badge)}</span></div>
+            <div class="seller-loc">${locationLine(f.parsed_address)}</div>
+            <div class="seller-sub">${hoursHtml(f.hours)}</div>
+          </div>
+          <div class="seller-side">
+            <div class="seller-price">${faNum(f.price_toman)} <small>تومان</small></div>
+            <button type="button" class="btn btn-outline btn-sm" data-action="wayfinding" data-shop="${esc(f.shop_id)}">${ICONS.route} مسیر</button>
+          </div>
+        </div>`).join("")}
+      <div class="field-label" style="margin-top:14px">راه‌های ارتباط</div>
+      <div class="hero-actions" style="margin-top:6px">
+        ${(r.contact_channels || []).map((c) => `<a class="btn ${c.real ? "btn-primary" : "btn-ghost"} btn-sm" href="${esc(c.url)}" ${c.type === "phone" ? "" : 'target="_blank" rel="noopener nofollow"'} title="${esc(c.note || "")}">${esc(c.label)}</a>`).join("") || '<span class="faint">راه ارتباطی ثبت نشده</span>'}
+        <button type="button" class="btn btn-ghost btn-sm" data-action="copy" data-target="followup-draft">${ICONS.copy} کپی پیام رزرو</button>
+      </div>
+      <div id="followup-draft" hidden>${esc(r.chat_draft_text)}</div>
+      ${(r.contact_channels || []).some((c) => !c.real) ? '<p class="faint" style="font-size:11px;margin:8px 0 0">شماره تلفن در دیتاست آزمایشی ترب ساختگی است.</p>' : ""}`;
+  }
+
   async runSimulation(offerId, question) {
     const log = document.getElementById("sandbox-log");
     if (!log) return;
@@ -1014,7 +1329,7 @@ class KalamApp {
     this.cart.push({ id, title: info.title, price: info.price, image: info.image });
     this.saveCart();
     this.toast("به سبد خرید حضوری اضافه شد.", "success");
-    if (location.hash.startsWith("#/product/")) this.route();
+    if (location.hash.startsWith("#/product/") || location.hash.startsWith("#/compare")) this.route();
   }
 
   removeFromCart(id) {
@@ -1142,6 +1457,7 @@ class KalamApp {
       <ul class="summary-lines">
         ${lines.map(([k, v]) => `<li><span>${esc(k)}</span><strong>${esc(v)}</strong></li>`).join("")}
       </ul>
+      ${data.visit_plan ? `<div class="visit-plan"><strong>🕒 بهترین زمان مراجعه</strong>${esc(data.visit_plan.label)}</div>` : ""}
       <div class="summary-total"><span>جمع سبد</span><strong>${faNum(route.total_price)} <small style="font-size:12px;font-weight:400">تومان</small></strong></div>
       ${data.savings && this.strategy === "same_hub" ? `<div class="savings-note">${ICONS.tag}<span>${faNum(data.savings.diff_toman)} تومان (${faNum(data.savings.percent)}٪) ارزان‌تر از خرید همه اقلام از یک مغازه</span></div>` : ""}
       ${compare.length ? `
@@ -1177,7 +1493,7 @@ class KalamApp {
           ${(pa.verbal_guide || []).length ? `<ol class="stop-guide">${pa.verbal_guide.map((g) => `<li>${esc(g)}</li>`).join("")}</ol>` : ""}
           ${st.has_heavy_item ? `<div class="heavy-note">این توقف کالای سنگین دارد و به آخر مسیر منتقل شده تا بار را در طول خرید حمل نکنید.</div>` : ""}
           <div class="stop-actions">
-            ${firstItem ? `<button type="button" class="btn btn-ghost btn-sm" data-action="dossier" data-shop="${esc(st.shop_id)}" data-offer="${esc(firstItem.offer_id || "")}" data-product="${esc(firstItem.title)}" data-price="${esc(firstItem.price)}">${ICONS.phone} استعلام</button>` : ""}
+            ${firstItem && firstItem.offer_id ? `<button type="button" class="btn btn-ghost btn-sm" data-action="follow-up" data-offer="${esc(firstItem.offer_id)}" data-product="${esc(firstItem.product_id)}" data-shop="${esc(st.shop_id)}" data-shop-name="${esc(st.shop_name)}">${ICONS.phone} پیگیری با فروشنده</button>` : ""}
             ${firstItem ? `<button type="button" class="btn-link" data-action="panic" data-product="${esc(firstItem.product_id)}" data-shop="${esc(st.shop_id)}" data-shop-name="${esc(st.shop_name)}">${ICONS.alert.replace("<svg", '<svg style="width:14px;height:14px"')} مغازه بسته بود؟</button>` : ""}
           </div>
         </div>
@@ -1241,6 +1557,8 @@ class KalamApp {
     document.getElementById("chat-messages").innerHTML = "";
     this.chatState = null;
     this.tree = null;
+    this.loc = readStore(LS_LOC, null);
+    this.compare = readStore(LS_COMPARE, []);
     this.greet();
   }
 
@@ -1275,6 +1593,8 @@ class KalamApp {
         current_hub: this.hub,
         active_product_id: this.activeProductId,
         active_shop_id: this.activeShopId,
+        user_lat: this.loc ? this.loc.lat : null,
+        user_lon: this.loc ? this.loc.lon : null,
       });
       loading.remove();
       // حافظه گفتگو: وضعیت جستجو برای پیام بعدی («ارزون‌ترش کدومه؟») نگه داشته می‌شود
@@ -1351,7 +1671,7 @@ class KalamApp {
           <div>
             <strong><a href="#/product/${encodeURIComponent(p.product_id)}">${esc(p.title)}</a></strong>
             <span class="faint">${b ? `${faNum(b.price)} تومان · ${esc(b.name)} · ${esc(b.parsed_address.mall_name)}، ${esc(b.parsed_address.floor_label)}` : "قیمت نامشخص"}</span>
-            ${b ? `<span class="faint">${esc(b.hours)} · ${faNum(p.offline_shops_count)} فروشگاه</span>` : ""}
+            ${b ? `<span class="faint">${esc(b.hours)}${b.distance_km !== null && b.distance_km !== undefined ? ` · ${kmText(b.distance_km)} از شما` : ""} · ${faNum(p.offline_shops_count)} فروشگاه</span>` : ""}
           </div>
           <button type="button" class="btn btn-outline btn-sm" data-action="add-cart" data-id="${esc(p.product_id)}">افزودن</button>
         </div>`;
@@ -1369,6 +1689,8 @@ class KalamApp {
     const t = document.createElement("div");
     t.className = `toast ${type}`;
     t.textContent = message;
+    // حداکثر دو پیام هم‌زمان تا روی محتوا را نپوشانند
+    while (stack.children.length >= 2) stack.firstChild.remove();
     stack.appendChild(t);
     setTimeout(() => t.remove(), 3000);
   }
@@ -1376,4 +1698,8 @@ class KalamApp {
 
 window.addEventListener("DOMContentLoaded", () => {
   window.app = new KalamApp();
+  // کار بدون اینترنت (زیرزمین پاساژها): پوسته برنامه و آخرین پاسخ‌های دیده‌شده کش می‌شوند
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    navigator.serviceWorker.register("/sw.js").catch(() => { /* بدون SW هم برنامه کار می‌کند */ });
+  }
 });

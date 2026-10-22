@@ -4,8 +4,9 @@
 """
 
 from collections import defaultdict
-from .hours import hours_status
+from .hours import common_open_window, hours_status
 from .imwp import parse_mall_address
+from .textutil import to_fa_digits
 
 # دسته‌های مشمول قید کالای سنگین
 HEAVY_CATEGORIES = [
@@ -197,7 +198,7 @@ class InPersonCartRouter:
                 savings = {
                     "diff_toman": diff,
                     "percent": pct,
-                    "description": f"{diff:,} تومان ({pct}٪) صرفه‌جویی نسبت به تک‌مغازه با فقط چند قدم پیاده‌روی!"
+                    "description": f"{to_fa_digits(f'{diff:,}')} تومان ({to_fa_digits(pct).replace('.', '٫')}٪) ارزان‌تر از خرید همه اقلام از یک مغازه"
                 }
 
         # انتخاب مسیر برگزیده بر اساس استراتژی درخواستی
@@ -221,9 +222,17 @@ class InPersonCartRouter:
         else:
             primary_route = hub_routes[0] if hub_routes else (single_stops[0] if single_stops else multi_hub_route)
 
+        # بهترین زمان مراجعه: زودترین بازه‌ای که همه مغازه‌های مسیر هم‌زمان باز باشند
+        visit_plan = None
+        if primary_route and primary_route.get("stops"):
+            visit_plan = common_open_window(
+                [shops_info[st["shop_id"]]["weekly_hours"] for st in primary_route["stops"] if st["shop_id"] in shops_info]
+            )
+
         return {
             "requested_items_count": len(product_ids),
             "primary_route": primary_route,
+            "visit_plan": visit_plan,
             "savings": savings,
             "single_stop_available": len(single_stops) > 0,
             "best_single_stop": single_stops[0] if single_stops else None,

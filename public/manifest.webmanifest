@@ -1,0 +1,16 @@
+{
+  "name": "کَلَم — دستیار خرید حضوری ترب",
+  "short_name": "کَلَم",
+  "description": "کمترین قیمت حضوری، آدرس طبقه و واحد، ساعت کاری و مسیر خرید در پاساژهای تهران",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#d73948",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

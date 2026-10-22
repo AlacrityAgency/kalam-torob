@@ -13,6 +13,7 @@ import re
 import sqlite3
 from typing import Iterable
 
+from .algorithms.geo import distance_km
 from .algorithms.hours import hours_status
 from .algorithms.textutil import days_since
 
@@ -164,12 +165,14 @@ def place_matches(place: str, location_label, address) -> bool:
 
 OFFER_COLUMNS = """
     o.product_id, o.offer_id, o.price_toman, o.last_price_changed_at, o.is_copy, o.price_suspect,
-    s.shop_id, s.location_label, s.address, s.credit_providers, s.hours_known, s.weekly_hours
+    s.shop_id, s.location_label, s.address, s.credit_providers, s.hours_known, s.weekly_hours, s.lat, s.lon
 """
 
 
 def search_products(conn: sqlite3.Connection, tokens: list[str], *, optional: list[str] | None = None,
-                    category: str | None = None, limit: int = 25, accessories: str = "after", **filters) -> list[dict]:
+                    category: str | None = None, limit: int = 25, accessories: str = "after",
+                    user_lat: float | None = None, user_lon: float | None = None, max_km: float | None = None,
+                    **filters) -> list[dict]:
     """
     جستجوی کالا با شرایط خرید. خروجی به ترتیب ارتباط است؛ min_price از آفرهای سالم
     (غیر کپی، قیمت غیرپرت) و منطبق با فیلترها محاسبه می‌شود.
@@ -193,9 +196,14 @@ def search_products(conn: sqlite3.Connection, tokens: list[str], *, optional: li
         row = dict(zip(cols, values))
         if not offer_matches(row, **filters):
             continue
-        a = agg.setdefault(row["product_id"], {"prices": [], "shops": set()})
+        dist = distance_km(user_lat, user_lon, row["lat"], row["lon"])
+        if max_km and (dist is None or dist > max_km):
+            continue
+        a = agg.setdefault(row["product_id"], {"prices": [], "shops": set(), "nearest": None})
         a["prices"].append(row["price_toman"])
         a["shops"].add(row["shop_id"])
+        if dist is not None and (a["nearest"] is None or dist < a["nearest"]):
+            a["nearest"] = dist
     if not agg:
         return []
 
@@ -232,6 +240,7 @@ def search_products(conn: sqlite3.Connection, tokens: list[str], *, optional: li
             "min_price_toman": min(a["prices"]),
             "max_price_toman": max(a["prices"]),
             "available_offline_shops_count": len(a["shops"]),
+            "nearest_km": round(a["nearest"], 2) if a["nearest"] is not None else None,
         })
         if len(results) >= limit:
             break

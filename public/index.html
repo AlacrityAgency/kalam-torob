@@ -6,7 +6,9 @@
   <meta name="theme-color" content="#ffffff">
   <title>کَلَم | دستیار خرید حضوری ترب</title>
   <meta name="description" content="کَلَم، دستیار خرید حضوری ترب: مقایسه قیمت مغازه‌های پاساژهای تهران، مسیر خرید چندقلمی، آدرس طبقه و واحد و جایگزین فوری مغازه بسته.">
-  <link rel="icon" href="./logo.jpg">
+  <link rel="icon" href="./icon-192.png">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icon-192.png">
   <link rel="stylesheet" href="./app.css">
 </head>
 <body>
@@ -38,6 +40,15 @@
           </button>
           <ul class="hub-menu" id="hub-menu" role="listbox" hidden></ul>
         </div>
+        <button type="button" class="header-btn loc-btn" id="loc-btn" data-action="open-location" aria-label="موقعیت من">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7"/></svg>
+          <span id="loc-label">موقعیت من</span>
+        </button>
+        <a class="header-btn compare-link" href="#/compare" aria-label="مقایسه کالاها" id="compare-link" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h7v14H4zM13 4h7v16h-7z"/></svg>
+          <span class="cart-link-text">مقایسه</span>
+          <span class="badge-count" id="compare-count">0</span>
+        </a>
         <a class="header-btn cart-link" href="#/cart" aria-label="سبد خرید حضوری">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6.2"/><circle cx="10" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/></svg>
           <span class="cart-link-text">سبد حضوری</span>
