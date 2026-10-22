@@ -78,12 +78,13 @@ def generate_inquiry_dossier(product_title: str, price_toman: int, shop_name: st
     """
     تولید اسکریپت صوتی ۱۲ ثانیه‌ای تماس و متن آماده پیام‌رسان
     """
-    phone = parse_phone_number(contacts_raw) or "۰۲۱۵۵۰۰۰۰۰۰"
+    # اگر شماره‌ای ثبت نشده باشد None برمی‌گردد تا شماره ساختگی نمایش داده نشود
+    phone = parse_phone_number(contacts_raw)
     formatted_price = f"{price_toman:,} تومان" if price_toman else "قیمت نیازمند استعلام"
 
     # اسکریپت ۱۲ ثانیه‌ای استاندارد بازار
     phone_script = (
-        f"«سلام وقت بخیر، از سمت ترب تماس می‌گیرم. "
+        f"«سلام وقت بخیر، فروشگاهتون رو در ترب پیدا کردم. "
         f"آیا مدل {product_title[:35]} رو موجود دارین و قیمت روزتون همون {formatted_price} هست؟ "
         f"برای خرید حضوری تا چه ساعتی تشریف دارید؟»"
     )

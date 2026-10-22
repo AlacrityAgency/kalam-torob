@@ -73,9 +73,15 @@ cd kalam-torob
 pip install -r requirements.txt
 ```
 
-### ۳. ساخت پایگاه داده (اختیاری در صورت داشتن دیتاست)
+### ۳. ساخت پایگاه داده
 اگر فایل‌های CSV دیتاست ترب در پوشه `dataset/` قرار دارد:
 ```bash
+python scripts/build_db.py
+```
+
+اگر دیتاست واقعی را ندارید، برای اجرای محلی یک دیتاست **نمونه و ساختگی** با همان ساختار بسازید (نام مغازه‌ها، قیمت‌ها و شماره‌ها واقعی نیستند):
+```bash
+python scripts/generate_sample_dataset.py
 python scripts/build_db.py
 ```
 *این اسکریپت جدول‌های نرمال‌شده `shops`, `products`, `offers` و جدول FTS5 جستجوی تمام‌متن فارسی را می‌سازد.*
