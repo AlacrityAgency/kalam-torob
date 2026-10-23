@@ -885,3 +885,17 @@ class MissionAgentTests(unittest.TestCase):
     def test_single_shop_unknown_hours_label(self):
         r = common_open_window(["{}"], subject="مغازه باز است")
         self.assertFalse(r["found"])
+
+    def test_chat_runs_agent_inside_assistant(self):
+        """ایجنت داخل همان دستیار است: «هماهنگ کن» بعد از جستجو روی همان کالا مأموریت اجرا می‌کند"""
+        a = KalamAssistant(self.conn)
+        r = a.process_message("گوشی سامسونگ A55")
+        self.assertEqual(r["type"], "product_search")
+        r = a.process_message("هماهنگ کن", state=r["state"])
+        self.assertEqual(r["type"], "mission")
+        self.assertEqual(r["result"]["product"]["product_id"], "p1")
+        # بعد از مأموریت، حافظه گفتگو سر جایش است
+        r = a.process_message("ارزون‌ترش کدومه؟", state=r["state"])
+        self.assertEqual(r["type"], "product_search")
+        # سؤال معمولی به ایجنت نمی‌رود
+        self.assertNotEqual(a.process_message("گوشی سامسونگ A55")["type"], "mission")

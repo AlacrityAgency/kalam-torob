@@ -36,6 +36,7 @@ MISSION_PHRASES = (
     "بگرد", "دنبال", "ماموریت", "مأموریت", "ایجنت", "کن", "یه", "یک دونه", "و",
 )
 _PHRASE_RE = re.compile(r"(?:^|\s)(?:" + "|".join(sorted(map(re.escape, MISSION_PHRASES), key=len, reverse=True)) + r")(?=\s|$|[،,.!؟?])")
+SEARCH_STATE_KEYS = ("tokens", "optional", "category", "place", "budget_min", "budget_max", "provider", "credit", "open_now")
 FLAG_KEYS = ("place", "budget_min", "budget_max", "provider", "credit", "open_now", "near", "cheapest")
 MAX_FOLLOW_UPS = 3
 NOTICE = "پاسخ فروشنده‌ها شبیه‌سازی از داده‌های ثبت‌شده در ترب است؛ با فروشنده واقعی تماس گرفته نشده."
@@ -51,6 +52,14 @@ def _fa_km(km) -> str:
     if km < 1:
         return f"{to_fa_digits(int(round(km * 1000, -1)))} متر"
     return f"{to_fa_digits(f'{km:.1f}').replace('.', '٫')} کیلومتر"
+
+
+# پیامی که «کار» می‌خواهد نه «جواب»: دستیار آن را به ایجنت می‌سپارد
+MISSION_RE = re.compile(r"(هماهنگ\s*(?:ش\s*)?کن|ماموریت|مأموریت|برام\s+پیدا\s*(?:ش\s*)?کن|پیدا\s*(?:ش\s*)?کن\s+و|رزرو\s*(?:ش\s*)?کن|ایجنت)")
+
+
+def is_mission(text: str) -> bool:
+    return bool(text and MISSION_RE.search(text))
 
 
 def clean_mission_text(text: str) -> str:
@@ -292,7 +301,9 @@ def run_mission(conn: sqlite3.Connection, text: str, context: dict | None = None
                 "location_label": o["location_label"],
             } for o in alternatives],
         },
-        "state": {"active_product_id": product["product_id"], "active_shop_id": chosen["shop_id"],
+        # حافظه گفتگو: پیام بعدی («ارزون‌ترش؟»، «تا ۲۰ میلیون چی؟») روی همین جستجو اعمال می‌شود
+        "state": {**{k: slots.get(k) for k in SEARCH_STATE_KEYS if slots.get(k)},
+                  "active_product_id": product["product_id"], "active_shop_id": chosen["shop_id"],
                   "active_product_title": product["persian_title"]},
         "suggested_prompts": ["کدوم مغازه جنس بهتر داره", "آیا همین مغازه این لوازم جانبی رو یکجا داره؟", "اقلام مکمل برای تکمیل این خرید چیه؟"],
     }

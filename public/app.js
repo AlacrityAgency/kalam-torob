@@ -11,14 +11,10 @@ const LS_ROUTE = "kalam_route_cache";
 const LS_LOC = "kalam_location";
 const LS_COMPARE = "kalam_compare";
 const LS_DOCK = "kalam_assistant_docked";
-const LS_MODE = "kalam_assistant_mode";
 const DOCK_QUERY = "(min-width: 1100px)";
-// جمله‌هایی که کار کامل می‌خواهند («پیدا کن و هماهنگ کن») در حالت گفتگو هم به ایجنت سپرده می‌شوند
-const MISSION_RE = /(هماهنگ\s*(?:ش\s*)?کن|ماموریت|مأموریت|برام\s+پیدا\s*(?:ش\s*)?کن|پیدا\s*کن\s+و)/;
 const AGENT_STARTERS = [
   "یه گوشی A55 قسطی نزدیک من پیدا کن و هماهنگ کن",
-  "ارزون‌ترین ایرپاد که الان باز باشه رو پیدا کن",
-  "دریل شارژی در لاله زار برام پیدا کن",
+  "ارزون‌ترین ایرپاد که الان باز باشه رو پیدا کن و هماهنگ کن",
 ];
 const MAX_COMPARE = 4;
 
@@ -472,12 +468,12 @@ class KalamApp {
         case "wayfinding": this.showWayfinding(d.shop); break;
         case "dossier": this.showDossier(d.shop, d.product, Number(d.price || 0), d.offer); break;
         case "panic": this.showPanic(d.product, d.shop, d.shopName); break;
-        case "copy": this.copyText(d.target); break;
+        case "copy": this.copyFrom(d.target); break;
         case "save-route": this.saveRouteOffline(); break;
-        case "chat-prompt": this.sendChat(d.text, null, d.mode === "chat"); break;
-        case "assistant-mode": this.setAssistantMode(d.mode); break;
+        case "chat-prompt": this.sendChat(d.text); break;
         case "toggle-dock": this.setDocked(!this.docked); break;
-        case "run-mission": this.setAssistantMode("agent", false); this.runMission(d.text || "برام هماهنگ کن"); break;
+        case "run-mission": this.sendChat(d.text || "برای همین کالا هماهنگ کن"); break;
+        case "mission-product": this.missionForProduct(d.id); break;
         case "copy-text": this.copyText(d.text); break;
         case "go": this.closeModal(); this.go(d.href); break;
         case "open-location": this.showLocationModal(); break;
@@ -507,6 +503,8 @@ class KalamApp {
     const params = new URLSearchParams(query);
     document.body.classList.toggle("is-home", path === "/");
     this.closeModal();
+    // در موبایل دستیار برگه تمام‌صفحه است؛ با رفتن به صفحه دیگر (مثلاً «صفحه کالا» از نتیجه ایجنت) کنار می‌رود
+    if (window.matchMedia("(max-width: 720px)").matches && !document.getElementById("assistant").hidden) this.toggleAssistant(false);
     window.scrollTo(0, 0);
 
     const headerInput = document.getElementById("header-search-input");
@@ -1386,63 +1384,6 @@ class KalamApp {
       ${phone ? `<p class="faint" style="font-size:12px;margin:10px 0 0">شماره‌های تماس در دیتاست آزمایشی ترب ساختگی‌اند و ممکن است به فروشگاه واقعی وصل نشوند.</p>` : ""}`;
   }
 
-  async runFollowUp(offerId, productId, shopId, shopName) {
-    this.activeShopId = shopId;
-    this.activeProductId = productId || this.activeProductId;
-    this.openModal(`پیگیری با ${shopName || "فروشنده"}`, `<div class="skeleton" style="height:160px"></div>`);
-    let r;
-    try {
-      r = await postJSON("/api/agent/follow-up", { offer_id: offerId });
-    } catch (e) {
-      document.getElementById("modal-body").innerHTML = this.errorHtml();
-      return;
-    }
-    const body = document.getElementById("modal-body");
-    const icon = { ok: "✓", warn: "!", bad: "✕" };
-    body.innerHTML = `
-      <p class="sandbox-note" style="margin-top:0">ایجنت کَلَم مراحل پیگیری را به ترتیب انجام می‌دهد. <span class="tag tag-amber">شبیه‌سازی</span> شماره‌های دیتاست ساختگی‌اند و پاسخ‌ها از داده‌های ثبت‌شده همین آفر ساخته می‌شوند.</p>
-      <ol class="followup-steps" id="followup-steps"></ol>
-      <div id="followup-decision"></div>`;
-    const list = document.getElementById("followup-steps");
-    // نمایش مرحله‌به‌مرحله تا کاربر روند پیگیری را ببیند
-    for (const st of r.steps) {
-      if (!document.getElementById("followup-steps")) return;
-      list.insertAdjacentHTML("beforeend", `
-        <li><span class="st ${st.status}">${icon[st.status] || "•"}</span>
-          <div><strong>${esc(st.label)}</strong>${st.question ? `<div class="faint">ایجنت: ${esc(st.question)}</div>` : ""}<div>${esc(st.text)}</div></div>
-        </li>`);
-      await new Promise((res) => setTimeout(res, 350));
-    }
-    const d = r.decision;
-    const cls = { go: "tag-green", call_first: "tag-amber", alternative: "tag-red" }[d.action] || "tag-gray";
-    const decision = document.getElementById("followup-decision");
-    if (!decision) return;
-    decision.innerHTML = `
-      <div class="visit-plan">
-        <strong><span class="tag ${cls}">${esc(d.label)}</span></strong>
-        <div>${esc(d.text)}</div>
-      </div>
-      ${(r.alternatives || []).map((f) => `
-        <div class="fallback-row">
-          <div style="min-width:0">
-            <div class="seller-name">${esc(f.name)} <span class="tag tag-gray">${esc(f.tier_badge)}</span></div>
-            <div class="seller-loc">${locationLine(f.parsed_address)}</div>
-            <div class="seller-sub">${hoursHtml(f.hours)}</div>
-          </div>
-          <div class="seller-side">
-            <div class="seller-price">${faNum(f.price_toman)} <small>تومان</small></div>
-            <button type="button" class="btn btn-outline btn-sm" data-action="wayfinding" data-shop="${esc(f.shop_id)}">${ICONS.route} مسیر</button>
-          </div>
-        </div>`).join("")}
-      <div class="field-label" style="margin-top:14px">راه‌های ارتباط</div>
-      <div class="hero-actions" style="margin-top:6px">
-        ${(r.contact_channels || []).map((c) => `<a class="btn ${c.real ? "btn-primary" : "btn-ghost"} btn-sm" href="${esc(c.url)}" ${c.type === "phone" ? "" : 'target="_blank" rel="noopener nofollow"'} title="${esc(c.note || "")}">${esc(c.label)}</a>`).join("") || '<span class="faint">راه ارتباطی ثبت نشده</span>'}
-        <button type="button" class="btn btn-ghost btn-sm" data-action="copy" data-target="followup-draft">${ICONS.copy} کپی پیام رزرو</button>
-      </div>
-      <div id="followup-draft" hidden>${esc(r.chat_draft_text)}</div>
-      ${(r.contact_channels || []).some((c) => !c.real) ? '<p class="faint" style="font-size:11px;margin:8px 0 0">شماره تلفن در دیتاست آزمایشی ترب ساختگی است.</p>' : ""}`;
-  }
-
   async runSimulation(offerId, question) {
     const log = document.getElementById("sandbox-log");
     if (!log) return;
@@ -1487,15 +1428,9 @@ class KalamApp {
     }
   }
 
-  async copyText(targetId) {
+  copyFrom(targetId) {
     const el = document.getElementById(targetId);
-    if (!el) return;
-    try {
-      await navigator.clipboard.writeText(el.textContent);
-      this.toast("متن کپی شد.", "success");
-    } catch (e) {
-      this.toast("کپی انجام نشد؛ متن را دستی انتخاب کنید.", "error");
-    }
+    if (el) this.copyText(el.textContent);
   }
 
   /* ---------- Cart & route ---------- */
@@ -1753,7 +1688,6 @@ class KalamApp {
     fab.setAttribute("aria-expanded", String(open));
     this.applyDock();
     if (open) {
-      this.setAssistantMode(this.assistantMode || readStore(LS_MODE, "chat"), false);
       this.updateAssistantContext();
       this.renderChatPrompts();
       if (!document.getElementById("chat-messages").children.length) this.greet();
@@ -1791,98 +1725,80 @@ class KalamApp {
     if (changed) setTimeout(() => window.dispatchEvent(new Event("resize")), 260);
   }
 
-  setAssistantMode(mode, announce = true) {
-    mode = mode === "agent" ? "agent" : "chat";
-    const changed = this.assistantMode !== mode;
-    this.assistantMode = mode;
-    writeStore(LS_MODE, mode);
-    document.getElementById("mode-chat").setAttribute("aria-selected", String(mode === "chat"));
-    document.getElementById("mode-agent").setAttribute("aria-selected", String(mode === "agent"));
-    document.getElementById("assistant").classList.toggle("agent-mode", mode === "agent");
-    const input = document.getElementById("chat-input");
-    input.placeholder = mode === "agent"
-      ? "مأموریت بدهید: مثلاً «یه A55 قسطی نزدیک من پیدا کن و هماهنگ کن»"
-      : "مثلاً: آیفون ۱۶ قسطی در چارسو یا دریل رونیکس...";
-    if (announce && changed && mode === "agent") this.introduceAgent();
-  }
-
-  introduceAgent() {
-    const onProduct = location.hash.startsWith("#/product/") && this.currentProduct;
-    const starters = onProduct ? ["برای همین کالا هماهنگ کن", ...AGENT_STARTERS.slice(0, 2)] : AGENT_STARTERS;
-    this.appendMsg(
-      "bot",
-      "🤖 **حالت ایجنت خرید.** یک جمله بگویید چه می‌خواهید؛ من خودم کالا را پیدا می‌کنم، فروشگاه‌ها را مقایسه می‌کنم، با آن‌ها به ترتیب پیگیری می‌کنم و برنامه مراجعه (زمان، مسیر داخل پاساژ و پیام آماده) را تحویل می‌دهم. هر قدم را با دلیلش می‌بینید.",
-      "",
-      starters,
-    );
-  }
-
   copyText(text) {
     if (!text) return;
-    const done = () => this.toast("پیام کپی شد.", "success");
-    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, () => this.toast("کپی ممکن نشد."));
+    const done = () => this.toast("متن کپی شد.", "success");
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, () => this.toast("کپی انجام نشد؛ متن را دستی انتخاب کنید.", "error"));
     else {
       const ta = document.createElement("textarea");
       ta.value = text;
       document.body.appendChild(ta);
       ta.select();
-      try { document.execCommand("copy"); done(); } catch (e) { this.toast("کپی ممکن نشد."); }
+      try { document.execCommand("copy"); done(); } catch (e) { this.toast("کپی انجام نشد؛ متن را دستی انتخاب کنید.", "error"); }
       ta.remove();
     }
   }
 
-  async runMission(text) {
-    if (document.getElementById("assistant").hidden) this.toggleAssistant(true);
-    this.appendMsg("user", text);
+  /* ---------- ایجنت داخل دستیار: هر کار ایجنت به شکل تایم‌لاین در همین گفتگو اجرا می‌شود ---------- */
+
+  agentShell(goal) {
     const box = this.appendMsg("bot", "", `
       <div class="mission">
-        <div class="mission-head"><span class="mission-badge">🤖 ایجنت</span><span class="mission-goal">${esc(text)}</span></div>
-        <ol class="mission-steps"><li class="mission-step is-running"><span class="mission-icon"></span><div><strong>شروع مأموریت…</strong></div></li></ol>
+        <div class="mission-head"><span class="mission-badge">🤖 ایجنت کَلَم</span><span class="mission-goal">${esc(goal)}</span></div>
+        <ol class="mission-steps"><li class="mission-step is-running"><span class="mission-icon"></span><div><strong>شروع…</strong></div></li></ol>
       </div>`);
     box.classList.add("msg-mission");
-    const onProduct = location.hash.startsWith("#/product/");
-    let data;
-    try {
-      data = await postJSON("/api/agent/mission", {
-        message: text,
-        current_hub: this.hub,
-        active_product_id: onProduct ? this.activeProductId : null,
-        user_lat: this.loc ? this.loc.lat : null,
-        user_lon: this.loc ? this.loc.lon : null,
-      });
-    } catch (e) {
-      box.querySelector(".mission-steps").innerHTML = `<li class="mission-step is-bad"><span class="mission-icon"></span><div><strong>ارتباط با سرور برقرار نشد</strong><div class="faint">دوباره امتحان کنید.</div></div></li>`;
-      return;
-    }
+    return box;
+  }
+
+  scrollChat() {
+    const b = document.getElementById("chat-messages");
+    b.scrollTop = b.scrollHeight;
+  }
+
+  // قدم‌ها یکی‌یکی «اجرا» می‌شوند تا کاربر ببیند ایجنت چه کرد و چرا
+  async playSteps(box, steps) {
     const list = box.querySelector(".mission-steps");
     list.innerHTML = "";
-    const scroll = () => { const b = document.getElementById("chat-messages"); b.scrollTop = b.scrollHeight; };
-    // قدم‌ها یکی‌یکی «اجرا» می‌شوند تا کاربر ببیند ایجنت چه کرد و چرا
-    for (const st of data.steps || []) {
+    for (const st of steps) {
       const li = document.createElement("li");
       li.className = "mission-step is-running";
       li.innerHTML = `<span class="mission-icon"></span><div><strong>${esc(st.title)}</strong><div class="mission-detail faint">در حال انجام…</div></div>`;
       list.appendChild(li);
-      scroll();
-      await new Promise((r) => setTimeout(r, 420));
+      this.scrollChat();
+      await new Promise((r) => setTimeout(r, 400));
       li.className = `mission-step is-${st.status === "ok" ? "ok" : st.status === "bad" ? "bad" : "warn"}`;
       li.querySelector(".mission-detail").outerHTML = `<div class="mission-detail">${esc(st.detail)}</div>
         ${(st.lines || []).length ? `<ul class="mission-lines">${st.lines.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}`;
-      scroll();
+      this.scrollChat();
     }
-    if (data.state) {
-      this.chatState = { ...(this.chatState || {}), ...data.state };
-      this.activeProductId = data.state.active_product_id;
-      this.activeShopId = data.state.active_shop_id;
-    }
+  }
+
+  appendSuggestions(box, prompts, label = "💡 قدم بعدی:") {
+    if (!prompts || !prompts.length) return;
+    const sug = document.createElement("div");
+    sug.className = "msg-suggestions";
+    sug.innerHTML = `<span class="msg-suggestions-label">${label}</span><div class="msg-suggestions-chips">${prompts.map((p) => `<button type="button" class="suggestion-chip" data-action="chat-prompt" data-text="${esc(p)}">${esc(p)}</button>`).join("")}</div>`;
+    box.appendChild(sug);
+  }
+
+  contactButtons(channels, draft) {
+    return `${(channels || []).filter((c) => c.real).map((c) => `<a class="btn btn-ghost btn-sm" href="${esc(c.url)}" target="_blank" rel="noopener nofollow">${esc(c.label)}</a>`).join("")}
+      ${draft ? `<button type="button" class="btn btn-ghost btn-sm" data-action="copy-text" data-text="${esc(draft)}">کپی پیام برای فروشنده</button>` : ""}`;
+  }
+
+  // پاسخ «mission» از /api/chat: مأموریت کامل خرید
+  async renderMission(data) {
+    const box = this.agentShell(data.goal || "");
+    await this.playSteps(box, data.steps || []);
     const r = data.result;
     const extra = document.createElement("div");
+    extra.className = "mission-result";
     if (r) {
       this.productCache[r.product.product_id] = { id: r.product.product_id, title: r.product.title, price: r.price_toman, image: null };
       const s = r.shop;
       const inCart = this.cart.some((c) => c.id === r.product.product_id);
       const decisionCls = { go: "ok", call_first: "warn", alternative: "bad" }[r.decision.action] || "warn";
-      extra.className = "mission-result";
       extra.innerHTML = `
         <div class="mission-decision is-${decisionCls}">${esc(r.decision.label)}</div>
         <div class="mission-summary">${esc(data.message).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")}</div>
@@ -1893,13 +1809,12 @@ class KalamApp {
           ${r.distance_km !== null && r.distance_km !== undefined ? `<div><span>فاصله</span><strong>${kmText(r.distance_km)}</strong></div>` : ""}
           <div><span>زمان مراجعه</span><strong>${esc(r.visit.label)}</strong></div>
         </div>
-        <div class="map-box map-mission" role="region" aria-label="نقشه نتیجه مأموریت"></div>
+        <div class="map-box map-mission" role="region" aria-label="نقشه نتیجه ایجنت"></div>
         <div class="mission-actions">
           <button type="button" class="btn btn-primary btn-sm msg-card-btn ${inCart ? "btn-added" : ""}" data-action="add-cart" data-id="${esc(r.product.product_id)}">${inCart ? "✓ افزوده شد" : "افزودن به سبد"}</button>
           <button type="button" class="btn btn-outline btn-sm" data-action="wayfinding" data-shop="${esc(s.shop_id)}">مسیر داخل پاساژ</button>
           <a class="btn btn-ghost btn-sm" href="#/product/${encodeURIComponent(r.product.product_id)}">صفحه کالا</a>
-          ${r.chat_draft_text ? `<button type="button" class="btn btn-ghost btn-sm" data-action="copy-text" data-text="${esc(r.chat_draft_text)}">کپی پیام برای فروشنده</button>` : ""}
-          ${(r.contact_channels || []).filter((c) => c.real).map((c) => `<a class="btn btn-ghost btn-sm" href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.label)}</a>`).join("")}
+          ${this.contactButtons(r.contact_channels, r.chat_draft_text)}
         </div>
         ${r.alternatives && r.alternatives.length ? `<div class="mission-alts faint">جایگزین‌ها: ${r.alternatives.map((a) => `${esc(a.name)} (${faNum(a.price_toman)} تومان)`).join("، ")}</div>` : ""}
         ${data.notice ? `<div class="mission-notice">${esc(data.notice)}</div>` : ""}`;
@@ -1912,29 +1827,59 @@ class KalamApp {
         })),
       ];
       const mapEl = extra.querySelector(".map-mission");
-      if (points.some((pt) => hasCoord(pt.lat, pt.lon))) drawMap(mapEl, { points, user: this.loc, route: false, onAction: this.onDocClick });
+      if (points.some((pt) => hasCoord(pt.lat, pt.lon))) drawMap(mapEl, { points, user: this.loc, onAction: this.onDocClick });
       else mapEl.remove();
-    } else if (data.message) {
-      extra.className = "mission-result";
-      extra.innerHTML = `<div class="mission-summary">${esc(data.message)}</div>`;
+    } else {
+      extra.innerHTML = `<div class="mission-summary">${esc(data.message || "")}</div>`;
       box.querySelector(".msg-extra").appendChild(extra);
     }
-    if (data.suggested_prompts && data.suggested_prompts.length) {
-      const sug = document.createElement("div");
-      sug.className = "msg-suggestions";
-      sug.innerHTML = `<span class="msg-suggestions-label">💡 قدم بعدی:</span><div class="msg-suggestions-chips">${data.suggested_prompts.map((p) => `<button type="button" class="suggestion-chip" data-action="chat-prompt" data-mode="chat" data-text="${esc(p)}">${esc(p)}</button>`).join("")}</div>`;
-      box.appendChild(sug);
+    this.appendSuggestions(box, data.suggested_prompts);
+    this.scrollChat();
+  }
+
+  // پیگیری با یک فروشنده (از صفحه کالا، کارت پیشنهاد یا مسیر سبد) هم داخل دستیار اجرا می‌شود
+  async runFollowUp(offerId, productId, shopId, shopName) {
+    this.activeShopId = shopId;
+    this.activeProductId = productId || this.activeProductId;
+    if (document.getElementById("assistant").hidden) this.toggleAssistant(true);
+    this.appendMsg("user", `پیگیری با ${shopName || "فروشنده"}`);
+    const box = this.agentShell(`پیگیری با ${shopName || "فروشنده"}`);
+    let r;
+    try {
+      r = await postJSON("/api/agent/follow-up", { offer_id: offerId });
+    } catch (e) {
+      box.querySelector(".mission-steps").innerHTML = `<li class="mission-step is-bad"><span class="mission-icon"></span><div><strong>ارتباط با سرور برقرار نشد</strong><div class="faint">دوباره امتحان کنید.</div></div></li>`;
+      return;
     }
-    scroll();
+    await this.playSteps(box, r.steps.map((st) => ({
+      title: st.label, status: st.status, detail: st.text, lines: st.question ? [`ایجنت پرسید: ${st.question}`] : [],
+    })));
+    const d = r.decision;
+    const cls = { go: "ok", call_first: "warn", alternative: "bad" }[d.action] || "warn";
+    const extra = document.createElement("div");
+    extra.className = "mission-result";
+    extra.innerHTML = `
+      <div class="mission-decision is-${cls}">${esc(d.label)}</div>
+      <div class="mission-summary">${esc(d.text)}</div>
+      ${(r.alternatives || []).map((f) => `
+        <div class="mission-facts"><div><span>${esc(f.name)}</span><strong>${faNum(f.price_toman)} تومان · ${esc((f.hours && f.hours.label) || "")}</strong></div></div>`).join("")}
+      <div class="mission-actions">
+        <button type="button" class="btn btn-outline btn-sm" data-action="wayfinding" data-shop="${esc(shopId)}">مسیر داخل پاساژ</button>
+        ${this.contactButtons(r.contact_channels, r.chat_draft_text)}
+      </div>
+      <div class="mission-notice">${esc(r.notice)}</div>`;
+    box.querySelector(".msg-extra").appendChild(extra);
+    this.appendSuggestions(box, ["برای همین کالا هماهنگ کن", "کدوم مغازه جنس بهتر داره", "آیا همین مغازه این لوازم جانبی رو یکجا داره؟"]);
+    this.scrollChat();
   }
 
   greet() {
-    const starters = this.getDynamicPrompts();
+    const starters = [...this.getDynamicPrompts().slice(0, 3), AGENT_STARTERS[0]];
     this.appendMsg(
       "bot",
-      "سلام! من کَلَم هستم، مشاور خرید حضوری شما در بازار تهران. نام کالا، محدوده، بودجه و شرایط قسطی را بگویید (مثلاً «گوشی A55 قسطی در چارسو تا ۲۵ میلیون»)؛ ارزان‌ترین مغازه معتبر، ساعت کاری، استعلام گارانتی و مسیر دقیق مغازه را به شما نشان می‌دهم.",
+      "سلام! من کَلَم هستم، مشاور و ایجنت خرید حضوری شما در بازار تهران.\n• **بپرسید:** «گوشی A55 قسطی در چارسو تا ۲۵ میلیون» — ارزان‌ترین مغازه معتبر، ساعت کاری و آدرس دقیقش را می‌گویم.\n• **کار بسپارید:** «... پیدا کن و هماهنگ کن» — 🤖 خودم کالا را پیدا می‌کنم، فروشگاه‌ها را مقایسه و با آن‌ها پیگیری می‌کنم و برنامه مراجعه می‌دهم.",
       "",
-      starters
+      [...new Set(starters)],
     );
   }
 
@@ -2078,9 +2023,15 @@ class KalamApp {
     return div;
   }
 
-  async sendChat(text, tree = null, chatOnly = false) {
+  missionForProduct(id) {
+    this.activeProductId = id;
+    this.activeShopId = null;
+    this.chatState = { ...(this.chatState || {}), active_product_id: id };
+    this.sendChat("برای همین کالا هماهنگ کن");
+  }
+
+  async sendChat(text, tree = null) {
     if (document.getElementById("assistant").hidden) this.toggleAssistant(true);
-    if (!tree && !chatOnly && (this.assistantMode === "agent" || MISSION_RE.test(text))) return this.runMission(text);
     this.appendMsg("user", text);
     const loading = this.appendMsg("bot", "در حال بررسی فروشگاه‌ها…");
     loading.classList.add("msg-loading");
@@ -2155,6 +2106,7 @@ class KalamApp {
   }
 
   renderBotResponse(data) {
+    if (data.type === "mission") return this.renderMission(data);
     let extra = "";
     if (data.type === "diagnostic_tree" && data.diagnostic) {
       this.tree = { category_key: data.category_key, steps: data.diagnostic.steps, option_index: null };
@@ -2198,7 +2150,10 @@ class KalamApp {
             </div>
             ${b ? `<div class="msg-card-sub"><span class="faint">${b.distance_km !== null && b.distance_km !== undefined ? `📍 ${kmText(b.distance_km)} از شما · ` : ""}${esc(b.hours)} · ${faNum(p.offline_shops_count)} فروشگاه</span></div>` : ""}
           </div>
-          <button type="button" class="btn btn-outline btn-sm msg-card-btn ${inCart ? 'btn-added' : ''}" data-action="add-cart" data-id="${esc(p.product_id)}">${inCart ? '✓ افزوده شد' : 'افزودن'}</button>
+          <div class="msg-card-actions">
+            <button type="button" class="btn btn-outline btn-sm msg-card-btn ${inCart ? 'btn-added' : ''}" data-action="add-cart" data-id="${esc(p.product_id)}">${inCart ? '✓ افزوده شد' : 'افزودن'}</button>
+            <button type="button" class="btn btn-ghost btn-sm btn-agent" data-action="mission-product" data-id="${esc(p.product_id)}" title="ایجنت فروشگاه‌ها را مقایسه و پیگیری می‌کند">🤖 هماهنگ کن</button>
+          </div>
         </div>`;
       }).join("");
     } else if (data.type === "complementary_recommendations" && data.recommendations) {
