@@ -32,7 +32,8 @@ from .nlu import extract
 from .search import OFFER_COLUMNS, offer_matches, place_matches, search_products
 
 STATE_KEYS = ("tokens", "optional", "category", "colloquial_concept", "colloquial_label", "bazaar_hub_guide", "where_to_buy",
-              "place", "budget_min", "budget_max", "provider", "credit", "open_now", "near", "cheapest", "active_product_id", "active_product_title")
+              "place", "budget_min", "budget_max", "provider", "credit", "open_now", "near", "cheapest",
+              "active_product_id", "active_product_title", "active_shop_id")
 
 
 def _fa_price(n) -> str:
@@ -74,6 +75,7 @@ class KalamAssistant:
         """
         context = context or {}
         state = {k: v for k, v in (state or {}).items() if k in STATE_KEYS}
+        self._active_shop_id = context.get("active_shop_id") or state.get("active_shop_id")
         cart_ids = context.get("cart_product_ids") or []
 
         if tree:
@@ -100,6 +102,8 @@ class KalamAssistant:
         if intent == "panic":
             return self._panic(context, cart_ids)
         if intent in ("route", "visit"):
+            if any(w in text for w in ("همین مغازه", "همین فروشگاه", "همین فروشنده")):
+                return self._consultation(text, slots, state, cart_ids, context)
             return self._route(cart_ids, slots.get("place"), visit=intent == "visit")
         if intent == "complementary":
             return self._complementary(context, cart_ids, state, slots)
@@ -194,6 +198,8 @@ class KalamAssistant:
             return {"type": "product_search", "message": msg, "products": [], "state": new_state}
 
         prod_list = [self._with_best_offer(p, filters, nearest=near) for p in products]
+        if prod_list and prod_list[0].get("best_shop"):
+            new_state["active_shop_id"] = prod_list[0]["best_shop"]["shop_id"]
         head = intro or ("نزدیک‌ترین فروشگاه‌ها" if near else "نتایج خرید حضوری")
         if slots.get("near") and ulat is None:
             conditions = (conditions + "، " if conditions else "") + "برای «نزدیک‌ترین»، موقعیتتان را از دکمه «موقعیت من» تعیین کنید"
@@ -235,7 +241,7 @@ class KalamAssistant:
         """ارزان‌ترین (یا نزدیک‌ترین) آفر منطبق با همان شرایط خرید، با ساعت کاری، فاصله و استعلام"""
         cursor = self.conn.cursor()
         cursor.execute(f"""
-            SELECT {OFFER_COLUMNS}, o.warranty, s.name, s.contacts
+            SELECT {OFFER_COLUMNS}, o.warranty, s.name, s.contacts, s.is_verified
             FROM offers o JOIN shops s ON o.shop_id = s.shop_id
             WHERE o.product_id = ? AND o.price_toman IS NOT NULL
             ORDER BY o.price_toman ASC
@@ -262,12 +268,23 @@ class KalamAssistant:
         }
         if best:
             hours = hours_status(best["weekly_hours"])
+            from .algorithms.ai_product_intelligence import score_offer_quality
+            q_score, q_badge, q_reasons = score_offer_quality(
+                best, {"name": best["name"], "is_verified": best.get("is_verified", 0)}
+            )
+            ref_shop_id = getattr(self, "_active_shop_id", None)
+            is_same_shop = bool(ref_shop_id and str(best["shop_id"]) == str(ref_shop_id))
             item["best_shop"] = {
                 "shop_id": best["shop_id"],
                 "name": best["name"],
                 "hub": best["location_label"],
                 "price": best["price_toman"],
                 "warranty": best["warranty"],
+                "quality_score": q_score,
+                "quality_badge": q_badge,
+                "quality_reasons": q_reasons,
+                "is_same_shop": is_same_shop,
+                "same_shop_badge": ("موجود در همین مغازه 🏬" if is_same_shop else None),
                 "hours": hours["label"],
                 "hours_state": hours["state"],
                 "distance_km": round(best["distance_km"], 2) if best["distance_km"] is not None else None,
@@ -301,7 +318,7 @@ class KalamAssistant:
             if loose:
                 product_id = loose[0]["product_id"]
 
-        shop_id = context.get("active_shop_id")
+        shop_id = context.get("active_shop_id") or state.get("active_shop_id")
 
         if not product_id:
             return {
@@ -409,6 +426,7 @@ class KalamAssistant:
             "type": "complementary_recommendations",
             "message": f"اقلام مکمل و سازگار برای «{base_product['title']}» (محاسبه‌شده با الگوریتم PACO):",
             "recommendations": scored,
+            "suggested_prompts": ai_prompts or [],
             "state": state,
         }
 
@@ -521,7 +539,7 @@ class KalamAssistant:
             loose = search_products(self.conn, state["tokens"], limit=1, accessories="exclude")
             if loose:
                 active_pid = loose[0]["product_id"]
-        active_sid = context.get("active_shop_id")
+        active_sid = context.get("active_shop_id") or state.get("active_shop_id")
         from .algorithms.ai_product_intelligence import answer_consultation_inquiry
         ans = answer_consultation_inquiry(
             self.conn,
@@ -531,6 +549,8 @@ class KalamAssistant:
             context=context,
         )
         products = [ans["active_product"]] if ans.get("active_product") else []
+        if products and products[0].get("best_shop"):
+            state["active_shop_id"] = products[0]["best_shop"]["shop_id"]
         return {
             "type": "consultation",
             "message": ans["message"],

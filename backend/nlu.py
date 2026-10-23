@@ -31,6 +31,7 @@ CONSULTATION_STRONG_PHRASES = [
     "صدای گیربکس", "سلامت موتور", "آب‌بندی", "آب بندی", "مهلت تست", "تست روشن شدن",
     "فاکتور بدون هزینه", "هزینه فعال سازی", "استعلام پلمپ", "استعلام همتا",
     "کارت گارانتی", "برگه گارانتی", "اصالت شرکتی", "استعلام اصالت",
+    "همین مغازه", "همین فروشگاه", "یکجا داره", "جنس بهتر", "کدوم مغازه", "کدام مغازه", "کدوم فروشگاه", "کدام فروشگاه", "کیفیت بهتر",
 ]
 CONSULTATION_GENERAL_PHRASES = [
     "ضمانت", "گارانتی", "وارانتی", "شرایط گارانتی", "شرکت گارانتی",
@@ -48,6 +49,11 @@ QUESTION_ENDERS = ["؟", "میشود", "می‌شود", "میشه", "چطوره"
 def is_consultation_query(text: str) -> bool:
     t_norm = normalize_text(text)
     w_set = set(t_norm.split())
+
+    # استعلام ساعت کاری یا باز بودن فروشگاه‌ها باید به نیت hours برود نه consultation
+    if any(h in t_norm for h in ("بازن", "بازند", "باز است", "باز هستند", "ساعت کار", "ساعت کاری", "ساعات کاری")):
+        return False
+
     # عبارات قدرتمند و قطعی استعلام خرید حضوری (پلمپ، رجیستری، فعال‌سازی، هزینه اجباری، تخفیف پای پوز و تست سلامت)
     if any(p in t_norm for p in CONSULTATION_STRONG_PHRASES):
         return True
@@ -388,6 +394,9 @@ def openai_or_arvan_extract(text: str, places: list[str], previous: dict | None)
             raw_intent = (parsed.get("intent") or "").lower()
             if raw_intent in ("purchase", "buy", "find"):
                 raw_intent = "search"
+            if any(w in text for w in ("همین مغازه", "همین فروشگاه", "همینجا", "جنس بهتر", "کدوم مغازه", "کدام مغازه")):
+                if raw_intent in ("route", "search", "other"):
+                    raw_intent = "consultation"
             return {
                 "intent": raw_intent if raw_intent in INTENTS else "search",
                 "tokens": tokenize(parsed.get("product_query", ""), STOPWORDS),
@@ -475,6 +484,9 @@ def extract(text: str, places: list[str], previous: dict | None = None) -> tuple
     # گاردریل حاکمیتی قطعی: سوالات پزشکی یا برنامه‌نویسی هرگز نباید جستجو شوند یا به AI بیرونی ارسال گردند
     if local.get("intent") == "out_of_domain":
         return local, "guardrail"
+    # استعلام قطعی موجودی همان مغازه و رتبه‌بندی اصالت کالا
+    if local.get("intent") == "consultation" and any(w in text for w in ("همین مغازه", "همین فروشگاه", "همینجا", "جنس بهتر", "کدوم مغازه", "کدام مغازه")):
+        return local, "deterministic"
     llm, source = openai_or_arvan_extract(text, places, previous)
     if llm is None:
         llm = llm_extract(text, places, previous)

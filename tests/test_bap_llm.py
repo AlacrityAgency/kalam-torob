@@ -120,23 +120,30 @@ class TestBazaarBattlePrompts(unittest.TestCase):
     """آزمون‌های تولید پرامپت‌های استعلام و سلاح مذاکره بازار"""
 
     def test_01_phone_battle_prompts(self):
-        """آزمون سلاح‌های مذاکره در خرید گوشی موبایل"""
+        """آزمون پیشنهادهای فروش‌محور، مکمل و استعلام کیفیت در خرید گوشی موبایل"""
         phone = {"title": "سامسونگ Galaxy A55 5G", "category": "گوشی موبایل", "brand": "سامسونگ"}
         prompts = generate_dynamic_prompts(product=phone)
-        # ۱. سپر ضد هزینه پنهان فعال‌سازی و نرم‌افزار
-        self.assertTrue(any("هزینه اجباری فعال‌سازی" in p or "نرم‌افزار" in p for p in prompts))
-        # ۲. اهرم تخفیف سبد
-        self.assertTrue(any("تخفیف" in p for p in prompts))
-        # ۳. استعلام پلمپ و گارانتی
-        self.assertTrue(any("پلمپ" in p or "گارانتی" in p for p in prompts))
+        # ۱. پیشنهاد خرید کاور یا گلس مناسب مدل
+        self.assertTrue(any("کاور" in p or "گلس" in p for p in prompts))
+        # ۲. پیشنهاد شارژر فست اصلی
+        self.assertTrue(any("شارژر" in p for p in prompts))
+        # ۳. استعلام موجودی یکجای همان مغازه
+        self.assertTrue(any("همین مغازه" in p for p in prompts))
+        # ۴. استعلام جنس بهتر و گارانتی معتبرتر
+        self.assertTrue(any("جنس بهتر" in p or "گارانتی" in p for p in prompts))
 
     def test_02_tool_battle_prompts(self):
-        """آزمون سلاح‌های مذاکره در بازار ابزار حسن‌آباد"""
+        """آزمون پیشنهادهای فروش‌محور و لوازم جانبی کارگاهی در بازار ابزار حسن‌آباد"""
         tool = {"title": "دریل بتن کن رونیکس مدل 2701", "category": "دریل و بتن کن", "brand": "رونیکس"}
         prompts = generate_dynamic_prompts(product=tool)
-        self.assertTrue(any("تست روشن شدن" in p or "گیربکس" in p for p in prompts))
-        self.assertTrue(any("تخفیف نقدی پای پوز" in p or "تخفیف" in p for p in prompts))
+        # ۱. اقلام مصرفی و ست مته
         self.assertTrue(any("مته" in p for p in prompts))
+        # ۲. تجهیزات ایمنی کارگاهی
+        self.assertTrue(any("عینک" in p or "دستکش" in p for p in prompts))
+        # ۳. استعلام خرید یکجا از همان مغازه
+        self.assertTrue(any("همین مغازه" in p for p in prompts))
+        # ۴. استعلام اصالت و گارانتی اصلی
+        self.assertTrue(any("جنس بهتر" in p or "گارانتی" in p for p in prompts))
 
 
 class TestEndToEndBAPIntegration(unittest.TestCase):

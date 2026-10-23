@@ -116,7 +116,7 @@ def generate_dynamic_prompts(
 
         # دسته‌بندی موبایل و تبلت
         if any(w in cat for w in ("موبایل", "گوشی", "تبلت")):
-            prompts.append(f"گلس و کاور مناسب {model_str}")
+            prompts.append(f"کاور یا گلس ضد ضربه مناسب {model_str}")
             if "سامسونگ" in model_str or "شیائومی" in model_str:
                 prompts.append("شارژر دیواری فست ۲۵ وات اصلی")
             elif "آیفون" in model_str or "iphone" in model_str.lower():
@@ -124,68 +124,75 @@ def generate_dynamic_prompts(
             else:
                 prompts.append("شارژر دیواری فست و کابل اصلی")
 
-            prompts.append("قیمت فاکتور بدون هزینه اجباری فعال‌سازی")
-            prompts.append("استعلام پلمپ و رجیستری در سامانه همتا")
+            prompts.append("آیا همین مغازه این لوازم جانبی رو یکجا داره؟")
             if mall_label:
-                prompts.append(f"تخفیف نقدی پای پوز در {mall_label}")
+                prompts.append(f"کدوم مغازه در {mall_label} جنس بهتر و اورجینال داره؟")
             else:
-                prompts.append("تخفیف نقدی پای پوز در خرید حضوری")
+                prompts.append("کدوم مغازه جنس بهتر و اورجینال (گارانتی شرکتی) داره؟")
+            prompts.append("استعلام پلمپ و رجیستری در سامانه همتا")
+
+        # دسته‌بندی لوازم خانگی، سماور، چای‌ساز و آشپزخانه
+        elif any(w in cat for w in ("سماور", "چای ساز", "چای‌ساز", "کتری", "قهوه", "اسپرسو", "جارو", "آشپزخانه", "خانگی")):
+            prompts.append("جرم‌گیر و رسوب‌زدای مخصوص سماور")
+            prompts.append("محافظ برق استاندارد لوازم خانگی")
+            prompts.append("آیا همین مغازه این اقلام جانبی رو یکجا داره؟")
+            prompts.append("کدوم مغازه جنس بهتر و گارانتی معتبرتر داره؟")
+            prompts.append("خرید المنت یا قطعات مصرفی یدکی")
 
         # دسته‌بندی ابزارآلات و دریل
-        elif any(w in cat for w in ("دریل", "فرز", "آچار", "چکش", "ابزار", "بتن")):
+        elif any(w in cat for w in ("دریل", "فرز", "آچار", "چکش", "ابزار", "بتن", "جوش")):
             prompts.append(f"ست مته دریل {meta.get('brand') or 'رونیکس'}")
-            prompts.append("تست روشن شدن و صدای گیربکس")
-            prompts.append("تخفیف نقدی پای پوز روی متعلقات")
             prompts.append("عینک ایمنی و دستکش کارگاهی")
-            if mall_label:
-                prompts.append(f"نمایندگی رسمی قطعات در {mall_label}")
-            else:
-                prompts.append("فاکتور رسمی و گارانتی اصلی شرکتی")
+            prompts.append("آیا همین مغازه ست مته رو هم داره؟")
+            prompts.append("کدوم مغازه جنس بهتر و گارانتی اصلی داره؟")
+            prompts.append("تخفیف نقدی پای پوز روی متعلقات")
 
         # دسته‌بندی ساعت مچی
         elif any(w in cat for w in ("ساعت", "واچ", "مچ بند")):
             prompts.append("بند چرمی ساعت")
             prompts.append("بند فلزی ساعت")
-            prompts.append("تست آب‌بندی و سلامت موتور در مغازه")
-            prompts.append("کارت گارانتی معتبر و جعبه اصلی")
+            prompts.append("آیا همین مغازه این بندها رو داره؟")
+            prompts.append("کدوم مغازه جنس اورجینال و باکیفیت‌تر داره؟")
 
         # دسته‌بندی سیم، کابل و روشنایی
         elif any(w in cat for w in ("سیم", "کابل", "روشنایی", "کلید", "پریز", "فیوز")):
             prompts.append("لوله فلکسی برق")
             prompts.append("کلید و پریز برق")
-            prompts.append("فاکتور رسمی و گارانتی اصلی شرکتی")
-            prompts.append("تخفیف نقدی پای پوز در خرید حضوری")
+            prompts.append("آیا همین مغازه این اقلام رو یکجا داره؟")
+            prompts.append("کدوم مغازه جنس بهتر و باکیفیت‌تر داره؟")
 
         # دسته‌بندی لپ‌تاپ و قطعات کامپیوتر
         elif any(w in cat for w in ("لپ تاپ", "کامپیوتر", "نوت بوک", "هارد", "رم")):
             prompts.append("کوله پشتی لپ تاپ")
             prompts.append("ماوس بی‌سیم")
-            prompts.append("فاکتور رسمی و گارانتی اصلی شرکتی")
-            prompts.append("تخفیف نقدی پای پوز در خرید حضوری")
+            prompts.append("آیا همین مغازه این اقلام رو یکجا داره؟")
+            prompts.append("کدوم مغازه جنس بهتر و گارانتی اصلی داره؟")
 
         # دسته‌بندی پمپ و تجهیزات آبرسانی
         elif any(w in cat for w in ("پمپ", "ابرسانی", "کف کش")):
             prompts.append("پنج‌راهی برنجی و نوار تفلون")
-            prompts.append("فاکتور رسمی و گارانتی اصلی شرکتی")
-            prompts.append("تخفیف نقدی پای پوز در خرید حضوری")
+            prompts.append("آیا همین مغازه این اقلام رو یکجا داره؟")
+            prompts.append("کدوم مغازه جنس باکیفیت‌تر و گارانتی شرکتی داره؟")
 
         # دسته‌بندی ظروف و وسایل یکبار مصرف
         elif any(w in cat for w in ("یکبار مصرف", "یکبارمصرف", "پلاستیکی")):
             prompts.append("سفره یکبار مصرف")
             prompts.append("دستکش یکبار مصرف")
+            prompts.append("آیا همین مغازه این اقلام رو یکجا داره؟")
             prompts.append("تخفیف خرید تجمیعی از مغازه")
 
         # دسته‌بندی پارچ و لیوان، بلور و کریستال
         elif any(w in cat for w in ("لیوان", "پارچ", "استکان", "بلور", "کریستال", "پذیرایی")):
             prompts.append("زیر لیوانی و استند لیوان")
             prompts.append("پارچ یا بطری ست با این لیوان")
+            prompts.append("آیا همین مغازه این اقلام رو یکجا داره؟")
             prompts.append("تخفیف خرید تجمیعی از مغازه")
 
         # کالاهای عمومی متفرقه
         else:
             prompts.append("اقلام مکمل برای تکمیل این خرید چیه؟")
-            prompts.append("فاکتور رسمی و گارانتی اصلی شرکتی")
-            prompts.append("تخفیف نقدی پای پوز در خرید حضوری")
+            prompts.append("آیا همین مغازه این لوازم جانبی رو یکجا داره؟")
+            prompts.append("کدوم مغازه جنس بهتر و اورجینال داره؟")
 
     # سناریوی ۲: سبد خرید بدون صفحه کالای فعال
     elif has_cart:

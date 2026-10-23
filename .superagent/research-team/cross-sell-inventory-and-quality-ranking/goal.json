@@ -1,0 +1,34 @@
+{
+  "mission": "Sales-Centric Product Cross-Selling, Same-Shop Multi-Item Inventory Matching, and Quality-Tier Ranking (SCPQ)",
+  "problem_statement": "Shift Torob conversational suggestions from defensive procedural questions to high-conversion product sales (cases, glass, chargers, consumables). Implement multi-item same-shop inventory detection (whether the seller has the companion in stock) and objective quality-tier ranking (which shop has the genuine, superior warranty product).",
+  "roles": [
+    {
+      "name": "Commercial Retail & Merchandising Strategist (CRMS)",
+      "responsibility": "Formulate high-conversion product cross-sell suggestions (accessories, consumables, bundle add-ons) aligned with customer purchase psychology."
+    },
+    {
+      "name": "Multi-Item Inventory & Graph Matcher (MIIGM)",
+      "responsibility": "Design and implement Same-Shop Inventory Matching (SSIM) to identify whether the active store carries the companion items for single-stop shopping."
+    },
+    {
+      "name": "Quality & Authenticity Scoring Architect (QASA)",
+      "responsibility": "Formalize the Shop Quality & Authenticity Scoring Algorithm (SQAS) across warranty tiers, verification, and authenticity flags to determine 'کدوم مغازه جنس بهتر داره'."
+    },
+    {
+      "name": "Conversational UI & NLU Integration Engineer (CUIIE)",
+      "responsibility": "Integrate sales-centric prompt chips and rich badges ('موجود در همین مغازه', 'جنس برتر و اورجینال') into frontend bubbles and backend NLU search/consultation handlers."
+    },
+    {
+      "name": "Verification & Red-Team Tester (VRTT)",
+      "responsibility": "Write automated unit tests and execute live browser verifications across phones, samovars, drills, and laptops."
+    }
+  ],
+  "deliverables": [
+    ".superagent/research-team/cross-sell-inventory-and-quality-ranking/cross_sell_and_quality_algorithm.md",
+    "backend/algorithms/prompt_generator.py (Updated to sales-first cross-sell prompts)",
+    "backend/algorithms/ai_product_intelligence.py (Enhanced prompt template & quality/same-shop scoring)",
+    "backend/assistant.py (Quality-oriented queries & same-shop detection)",
+    "public/app.js & public/app.css (Rich badges and UI rendering)",
+    "tests/test_cross_sell_and_quality.py (Comprehensive test suite)"
+  ]
+}

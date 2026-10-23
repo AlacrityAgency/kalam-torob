@@ -1738,10 +1738,16 @@ class KalamApp {
         if (data.state && data.state.active_product_id) {
           this.activeProductId = data.state.active_product_id;
         }
+        if (data.state && data.state.active_shop_id) {
+          this.activeShopId = data.state.active_shop_id;
+        }
       }
       if (data.products && data.products.length) {
         this.activeProductId = data.products[0].product_id;
         this.currentProduct = data.products[0];
+        if (data.products[0].best_shop && data.products[0].best_shop.shop_id) {
+          this.activeShopId = data.products[0].best_shop.shop_id;
+        }
         this.updateAssistantContext();
       }
       this.renderBotResponse(data);
@@ -1813,8 +1819,13 @@ class KalamApp {
         const b = p.best_shop;
         const inCart = this.cart.some((c) => c.id === p.product_id);
         return `
-        <div class="msg-card">
+        <div class="msg-card ${b && b.is_same_shop ? 'msg-card-same-shop' : ''}">
           <div class="msg-card-content">
+            ${b && (b.same_shop_badge || b.quality_badge) ? `
+              <div class="msg-badges" style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:4px;">
+                ${b.same_shop_badge ? `<span class="badge badge-same-shop">${esc(b.same_shop_badge)}</span>` : ""}
+                ${b.quality_badge ? `<span class="badge badge-quality-gold">${esc(b.quality_badge)}</span>` : ""}
+              </div>` : ""}
             <strong class="msg-card-title"><a href="#/product/${encodeURIComponent(p.product_id)}">${esc(p.title)}</a></strong>
             <div class="msg-card-meta">
               <span class="msg-card-price">${b ? `${faNum(b.price)} <small>تومان</small>` : "قیمت نامشخص"}</span>
@@ -1830,15 +1841,19 @@ class KalamApp {
       extra = data.recommendations.slice(0, 4).map((p) => {
         const inCart = this.cart.some((c) => c.id === p.product_id);
         return `
-        <div class="msg-card">
+        <div class="msg-card ${p.is_same_shop ? 'msg-card-same-shop' : ''}">
           <div class="msg-card-content">
-            ${p.cognitive_category ? `<span class="badge ${p.cognitive_role === 'protective' ? 'badge-accent' : (p.bundle_eligible ? 'badge-primary' : 'badge-gray')}" style="display:inline-block; margin-bottom:3px; font-size:10px;">${esc(p.cognitive_category)}</span>` : ""}
+            <div class="msg-badges" style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:4px;">
+              ${p.same_shop_badge ? `<span class="badge badge-same-shop">${esc(p.same_shop_badge)}</span>` : ""}
+              ${p.quality_badge ? `<span class="badge badge-quality-gold">${esc(p.quality_badge)}</span>` : ""}
+              ${p.cognitive_category ? `<span class="badge ${p.cognitive_role === 'protective' ? 'badge-accent' : (p.bundle_eligible ? 'badge-primary' : 'badge-gray')}" style="font-size:10px;">${esc(p.cognitive_category)}</span>` : ""}
+            </div>
             <strong class="msg-card-title"><a href="#/product/${encodeURIComponent(p.product_id)}">${esc(p.title)}</a></strong>
             <div class="msg-card-meta">
               <span class="msg-card-price">${faNum(p.price_toman)} <small>تومان</small></span>
               <span class="msg-card-shop">${esc(p.shop_name)} · ${esc(p.location_description || (p.parsed_address ? `${p.parsed_address.mall_name}، ${p.parsed_address.floor_label}` : ""))}</span>
             </div>
-            ${p.bargaining_tip ? `<div style="font-size:11px; color:var(--primary); margin-top:2px; font-weight:600;">💡 ${esc(p.bargaining_tip)}</div>` : (p.reason ? `<span class="badge badge-gray" style="display:inline-block; margin-top:3px; font-size:11px;">${esc(p.reason)}</span>` : "")}
+            ${p.bargaining_tip ? `<div style="font-size:11px; color:var(--primary); margin-top:3px; font-weight:600;">💡 ${esc(p.bargaining_tip)}</div>` : (p.reason ? `<span class="badge badge-gray" style="display:inline-block; margin-top:3px; font-size:11px;">${esc(p.reason)}</span>` : "")}
           </div>
           <button type="button" class="btn btn-outline btn-sm msg-card-btn ${inCart ? 'btn-added' : ''}" data-action="add-cart" data-id="${esc(p.product_id)}">${inCart ? '✓ افزوده شد' : 'افزودن'}</button>
         </div>`;

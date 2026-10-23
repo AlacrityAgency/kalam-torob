@@ -95,9 +95,34 @@ def _heuristic_generate_intelligence(title: str, category: str, brand: Optional[
         })
         prompts = [
             f"ست مته دریل {brand or 'رونیکس'}",
-            "تست روشن شدن و صدای گیربکس",
+            "عینک ایمنی و دستکش کارگاهی",
+            "آیا همین مغازه ست مته رو هم داره؟",
+            "کدوم مغازه جنس بهتر و گارانتی اصلی داره؟",
             "تخفیف نقدی پای پوز روی متعلقات",
-            "عینک ایمنی کارگاهی",
+        ]
+
+    # لوازم خانگی برقی، سماور، چای‌ساز، قهوه‌ساز و کتری
+    elif any(w in clean_cat or w in clean_title for w in ("سماور", "چای ساز", "چای‌ساز", "کتری", "قهوه", "اسپرسو", "پلوپز", "سرخ کن", "جاروبرقی", "جارو")):
+        facets.append({
+            "role": "consumable",
+            "facet_name": "جرم‌گیر و رسوب‌زدای مخصوص المنت",
+            "search_tokens": ["جرم گیر", "رسوب زدا"],
+            "dep_score": 0.90,
+            "reason": "افزایش طول عمر المنت و حفظ کیفیت کارکرد دستگاه",
+        })
+        facets.append({
+            "role": "protective",
+            "facet_name": "محافظ ولتاژ و برق استاندارد",
+            "search_tokens": ["محافظ", "برق"],
+            "dep_score": 0.85,
+            "reason": "سپر محافظت از برد الکترونیکی و المنت در برابر نوسانات برق",
+        })
+        prompts = [
+            "جرم‌گیر و رسوب‌زدای مخصوص سماور",
+            "محافظ برق استاندارد لوازم خانگی",
+            "آیا همین مغازه این اقلام جانبی رو یکجا داره؟",
+            "کدوم مغازه جنس بهتر و گارانتی معتبرتر داره؟",
+            "خرید المنت یا قطعات مصرفی یدکی",
         ]
 
     # ساعت مچی، هوشمند، عقربه‌ای و دیجیتال
@@ -125,9 +150,9 @@ def _heuristic_generate_intelligence(title: str, category: str, brand: Optional[
         })
         prompts = [
             "بند چرمی ساعت",
-            "تست آب‌بندی و سلامت موتور در مغازه",
-            "کارت گارانتی معتبر و جعبه اصلی",
-            "تخفیف نقدی پای پوز در خرید حضوری",
+            "بند فلزی ساعت",
+            "آیا همین مغازه این بندها رو داره؟",
+            "کدوم مغازه جنس اورجینال و باکیفیت‌تر داره؟",
         ]
 
     # گوشی، تبلت و لوازم دیجیتال
@@ -153,27 +178,15 @@ def _heuristic_generate_intelligence(title: str, category: str, brand: Optional[
             "dep_score": 0.85,
             "reason": "راه‌اندازی فوری بدون آسیب به سلامت باتری",
         })
-        if "آیفون" in clean_title or "iphone" in clean_title.lower():
-            prompts = [
-                f"گلس و کاور مناسب {model_name}",
-                "شارژر ۲۰ وات اصلی اپل",
-                "استعلام پلمپ و رجیستری در سامانه همتا",
-                "قیمت فاکتور بدون هزینه اجباری فعال‌سازی",
-            ]
-        elif "سامسونگ" in clean_title or "شیائومی" in clean_title:
-            prompts = [
-                f"گلس و کاور مناسب {model_name}",
-                "شارژر دیواری فست ۲۵ وات اصلی",
-                "استعلام پلمپ و رجیستری در سامانه همتا",
-                "قیمت فاکتور بدون هزینه اجباری فعال‌سازی",
-            ]
-        else:
-            prompts = [
-                f"گلس و کاور مناسب {model_name}",
-                "شارژر دیواری فست و کابل اصلی",
-                "استعلام پلمپ و رجیستری در سامانه همتا",
-                "قیمت فاکتور بدون هزینه اجباری فعال‌سازی",
-            ]
+        charger_prompt = "شارژر ۲۰ وات اصلی اپل" if ("آیفون" in clean_title or "iphone" in clean_title.lower()) else \
+                         ("شارژر دیواری فست ۲۵ وات اصلی" if ("سامسونگ" in clean_title or "شیائومی" in clean_title) else "شارژر دیواری فست و کابل اصلی")
+        prompts = [
+            f"کاور یا گلس ضد ضربه مناسب {model_name}",
+            charger_prompt,
+            "آیا همین مغازه این لوازم جانبی رو یکجا داره؟",
+            "کدوم مغازه جنس بهتر و اورجینال (گارانتی شرکتی) داره؟",
+            "استعلام پلمپ و رجیستری در سامانه همتا",
+        ]
 
     # لپ‌تاپ و تجهیزات کامپیوتری
     elif any(w in clean_cat for w in ("لپ تاپ", "کامپیوتر", "نوت بوک", "مانیتور")):
@@ -194,8 +207,8 @@ def _heuristic_generate_intelligence(title: str, category: str, brand: Optional[
         prompts = [
             "کوله پشتی لپ تاپ",
             "ماوس بی‌سیم",
-            "فاکتور رسمی و گارانتی اصلی شرکتی",
-            "تخفیف نقدی پای پوز در خرید حضوری",
+            "آیا همین مغازه این اقلام رو یکجا داره؟",
+            "کدوم مغازه جنس بهتر و گارانتی اصلی داره؟",
         ]
 
     # وسایل خانه، آشپزخانه و پذیرایی
@@ -216,6 +229,7 @@ def _heuristic_generate_intelligence(title: str, category: str, brand: Optional[
         })
         prompts = [
             f"سفره و ملحقات مناسب {model_name}",
+            "آیا همین مغازه این اقلام رو یکجا داره؟",
             "استعلام قیمت عمده و بسته‌ای",
             "تخفیف خرید تجمیعی از مغازه",
         ]
@@ -238,14 +252,19 @@ def _heuristic_generate_intelligence(title: str, category: str, brand: Optional[
         })
         prompts = [
             f"جوراب نانو و کفی طبی مناسب {model_name}",
-            "امکان تست پاخور و سایزبندی در مغازه",
-            "ضمانت اصالت و سلامت دوخت",
+            "آیا همین مغازه این اقلام رو داره؟",
+            "کدوم مغازه جنس اصل و اورجینال داره؟",
             "تخفیف خرید جوراب همراه کفش",
         ]
 
-    # سایر کالاهای نامشخص: در صورت عدم دسترسی به AI آنلاین، هیچ فرض غلطی مثل کاور تحمیل نمی‌شود
+    # سایر کالاهای عمومی
     else:
         facets = []
+        prompts = [
+            "اقلام مکمل برای تکمیل این خرید چیه؟",
+            "آیا همین مغازه این لوازم جانبی رو یکجا داره؟",
+            "کدوم مغازه جنس بهتر و اورجینال داره؟",
+        ]
 
     return {
         "product_role": f"کالای {clean_cat or 'فروشگاهی'} مدل {model_name}",
@@ -266,10 +285,11 @@ Analyze the product using the BAP-LLM (Behavioral & Analytical Purchasing) frame
    - "protective" (سپر محافظت از سرمایه / Loss Aversion Shield): cases, glass, surge protector, gloves, safety glasses, etc.
    - "consumable" (راه‌اندازی فوری در محل / Out-of-box Readiness): wall chargers, drill bits, blades, beans, cables, etc.
    - "synergy" (ارتقای کاربری و بسته تجمیعی / Ecosystem & Bundle): stylus, wireless mouse, headsets, specialized stands.
-2. In-Store Bazaar Battle Prompts:
-   - Anti-hidden-fee probe (سپر ضد هزینه پنهان فعال‌سازی و نرم‌افزار)
-   - Same-store bundle discount lever (اهرم چانه‌زنی و تخفیف نقدی پای پوز در صورت تجمیع فاکتور)
-   - Unboxing, seal & warranty verification (استعلام سلامت پلمپ و گارانتی شرکتی قبل از پرداخت)
+2. Sales-Driven Companion Purchase Prompts (پیشنهاد فروش اقلام مکمل و مقایسه کیفیت):
+   The in_store_prompts list MUST focus on actionable companion purchases, checking same-store stock, and comparing quality (NOT procedural seller interrogation):
+   - 2 concrete cross-sell purchase queries matching the facets (e.g., "کاور یا گلس ضد ضربه مناسب این مدل", "خرید جرم‌گیر و رسوب‌زدای مخصوص سماور", "ست مته دریل")
+   - 1 same-shop multi-item availability probe: "آیا همین مغازه این لوازم جانبی رو یکجا داره؟"
+   - 1 shop quality/warranty comparison inquiry: "کدوم مغازه جنس بهتر و اورجینال (گارانتی شرکتی) داره؟"
 
 You must output ONLY valid JSON matching this schema:
 {
@@ -277,21 +297,21 @@ You must output ONLY valid JSON matching this schema:
   "facets": [
     {
       "role": "consumable" | "protective" | "synergy" | "accessory",
-      "facet_name": "Clear Persian companion name (e.g. تیغ اره دیسکی, دانه قهوه, کابل رابط)",
+      "facet_name": "Clear Persian companion name (e.g. کاور و گلس ضد ضربه, تیغ اره دیسکی, جرم‌گیر المنت)",
       "search_tokens": ["token1", "token2"],  // 2-3 Persian catalog search tokens
       "dep_score": 0.85,                      // float between 0.60 and 1.00
       "reason": "One short Persian sentence explaining why a customer in this shop needs this"
     }
   ],
   "in_store_prompts": [
-    "3 to 4 Persian battle-tested questions to ask the seller (covering warranty/seal, bundle discount, and anti-hidden fees)"
+    "4 Persian sales-driving prompts: 2 concrete product accessories, 1 same-shop stock inquiry, 1 shop quality/warranty comparison inquiry"
   ]
 }
 
 Rules:
 1. Provide 2 to 4 high-value facets. Do not recommend identical items or competitors (e.g. for a phone do NOT recommend another phone).
 2. For search_tokens, pick exact Persian catalog search words (e.g. ["شارژر", "دیواری"], ["تیغ", "اره"], ["کارت", "حافظه"]).
-3. In-store prompts must empower the buyer with confidence and negotiation leverage in Iranian offline shops.
+3. In-store prompts must be actionable purchase recommendations that empower the buyer to complete their purchase and compare quality.
 """
 
 
@@ -412,10 +432,19 @@ def get_product_intelligence(
                         need_fresh_prompts = True
                     elif "سامسونگ" in title and any("آیفون" in p for p in prompts):
                         need_fresh_prompts = True
+                    elif any(w in p for w in ("جلو چشم من", "انبارداری", "المنت و ترموستات", "چشم من به برق بزنید", "هزینه اجباری فعال‌سازی") for p in prompts):
+                        need_fresh_prompts = True
+                    elif not any(w in p for w in ("جنس بهتر", "همین مغازه", "کاور", "گلس", "شارژر", "مته", "جرم‌گیر", "بند") for p in prompts):
+                        need_fresh_prompts = True
 
                     if need_fresh_prompts:
                         intel_dyn = _heuristic_generate_intelligence(title, category, brand)
                         prompts = intel_dyn.get("in_store_prompts") or []
+                        try:
+                            conn.execute("UPDATE product_ai_intelligence SET prompts_json = ? WHERE product_id = ?;", (json.dumps(prompts, ensure_ascii=False), pid))
+                            conn.commit()
+                        except Exception:
+                            pass
 
                     res = {
                         "product_role": row[2] or f"کالای {category}",
@@ -458,6 +487,65 @@ def get_product_intelligence(
         _L1_MEMO_CACHE[pid] = intel
 
     return intel
+
+
+# ---------------------------------------------------------------------------
+# الگوریتم سنجش کیفیت و اصالت کالا (Shop Quality & Authenticity Score - SQAS)
+# ---------------------------------------------------------------------------
+
+def score_offer_quality(
+    offer: Dict[str, Any],
+    shop: Optional[Dict[str, Any]] = None,
+) -> Tuple[float, str, str]:
+    """
+    محاسبه شاخص کیفیت و اصالت کالا (Shop Quality & Authenticity Score - SQAS)
+    بر اساس:
+    1. اصالت کالا: اصل (is_copy == 0) vs کپی (is_copy == 1) - ضریب 0.40
+    2. پوشش گارانتی شرکتی و مدت زمان آن - ضریب 0.35
+    3. تایید و نماد فروشگاه در ترب - ضریب 0.15
+    4. سلامت قیمت و عدم شبهه کلاهبرداری - ضریب 0.10
+
+    خروجی: (quality_score, quality_badge, warranty_label)
+    """
+    is_copy = offer.get("is_copy", 0)
+    auth_score = 0.0 if is_copy == 1 else 1.0
+
+    warranty_raw = offer.get("warranty")
+    w_score = 0.10
+    w_label = "بدون گارانتی شرکتی"
+    if warranty_raw:
+        w_text = str(warranty_raw).lower()
+        if any(k in w_text for k in ("18", "24", "شرکتی", "تعویض", "2 سال", "5 سال", "سام سرویس", "مدیا پردازش")):
+            w_score = 1.0
+            w_label = "گارانتی رسمی و معتبر شرکتی"
+        elif any(k in w_text for k in ("12", "6", "خدمات", "1 سال")):
+            w_score = 0.75
+            w_label = "گارانتی استاندارد معتبر"
+        elif any(k in w_text for k in ("سلامت فیزیکی", "اصالت", "7 روز", "مهلت تست", "حضور مشتری")):
+            w_score = 0.50
+            w_label = "ضمانت سلامت فیزیکی و مهلت تست"
+
+    is_verified = 0
+    if shop:
+        is_verified = shop.get("is_verified", 0)
+    elif "is_verified" in offer:
+        is_verified = offer.get("is_verified", 0)
+    ver_score = 1.0 if is_verified == 1 else 0.60
+
+    price_suspect = offer.get("price_suspect", 0)
+    price_score = 0.20 if price_suspect == 1 else 1.0
+
+    total = 0.40 * auth_score + 0.35 * w_score + 0.15 * ver_score + 0.10 * price_score
+    total = round(total, 3)
+
+    if auth_score == 1.0 and total >= 0.78:
+        badge = "🥇 جنس برتر و اورجینال (گارانتی معتبر شرکتی)"
+    elif auth_score == 1.0:
+        badge = "نسخه اقتصادی / معمولی"
+    else:
+        badge = "⚠️ نسخه غیراصل / کپی"
+
+    return total, badge, w_label
 
 
 # ---------------------------------------------------------------------------
@@ -538,7 +626,8 @@ def find_grounded_complementary_items(
         placeholders = ",".join("?" * len(matched_pids))
         candidates = cursor.execute(f"""
             SELECT p.product_id, p.persian_title, p.category_name, p.brand_name, o.price_toman,
-                   o.last_price_changed_at, s.shop_id, s.name, s.address, s.location_label
+                   o.last_price_changed_at, s.shop_id, s.name, s.address, s.location_label,
+                   o.warranty, o.is_copy, o.price_suspect, s.is_verified
             FROM products p
             JOIN offers o ON p.product_id = o.product_id
             JOIN shops s ON o.shop_id = s.shop_id
@@ -592,6 +681,16 @@ def find_grounded_complementary_items(
                 if "کاسه نمد" in cand_title:
                     continue
 
+            q_score, q_badge, w_label = score_offer_quality({
+                "warranty": c[10], "is_copy": c[11], "price_suspect": c[12]
+            }, {"is_verified": c[13]})
+
+            is_same_shop = bool(shop_id and c[6] == shop_id)
+            is_same_mall = bool(mall_label and c[9] == mall_label)
+            same_shop_badge = f"🛍️ موجود در همین مغازه ({c[7]}) · خرید یکجا" if is_same_shop else (
+                f"📍 موجود در همین پاساژ ({c[9]})" if is_same_mall else ""
+            )
+
             cand = {
                 "product_id": c[0],
                 "title": c[1],
@@ -609,9 +708,17 @@ def find_grounded_complementary_items(
                 "complementary_role": facet_role,
                 "facet_name": facet_name,
                 "ai_reason": facet_reason,
+                "is_same_shop": is_same_shop,
+                "is_same_mall": is_same_mall,
+                "same_shop_badge": same_shop_badge,
+                "quality_score": q_score,
+                "quality_badge": q_badge,
+                "warranty_label": w_label,
             }
 
             score, details = calculate_paco_score(base_product, base_shop, cand)
+            if is_same_shop:
+                score *= 1.40  # تقویت اولویت خرید یکجا از همان فروشگاه
             if score <= 0:
                 continue
 
@@ -626,10 +733,16 @@ def find_grounded_complementary_items(
                 "freshness_badge": details.get("freshness_badge"),
                 "omega_economic": details.get("omega_economic"),
                 "bundle_bonus": details.get("bundle_bonus", 1.0),
-                "bundle_eligible": details.get("bundle_eligible", False),
+                "bundle_eligible": details.get("bundle_eligible", False) or is_same_shop,
                 "cognitive_role": details.get("cognitive_role", facet_role),
                 "cognitive_category": details.get("cognitive_category", "لوازم جانبی مکمل"),
-                "bargaining_tip": details.get("bargaining_tip"),
+                "bargaining_tip": details.get("bargaining_tip") or ("تخفیف فاکتور تجمیعی به دلیل خرید یکجا از همین مغازه" if is_same_shop else None),
+                "is_same_shop": is_same_shop,
+                "is_same_mall": is_same_mall,
+                "same_shop_badge": same_shop_badge,
+                "quality_score": q_score,
+                "quality_badge": q_badge,
+                "warranty_label": w_label,
             })
             best_by_product[cand["product_id"]] = cand
 
@@ -693,6 +806,168 @@ def answer_consultation_inquiry(
                 "location_label": row[8],
                 "address": row[9],
                 "warranty": row[10],
+            }
+
+    norm_q = normalize_text(query)
+
+    # الف) استعلام جنس بهتر، اصالت و باکیفیت‌ترین فروشگاه
+    is_quality_inquiry = any(w in norm_q for w in ("جنس بهتر", "باکیفیت تر", "باکیفیت‌تر", "کدوم مغازه بهتره", "کدوم مغازه جنس بهتر", "کدوم مغازه جنس اصل", "جنس اصل", "کیفیت بهتر", "اصل شرکتی"))
+    if is_quality_inquiry and active_product_id:
+        offers_rows = cursor.execute("""
+            SELECT p.product_id, p.persian_title, p.category_name, p.brand_name, p.image_urls,
+                   o.price_toman, s.shop_id, s.name, s.location_label, s.address, o.warranty, s.weekly_hours,
+                   o.is_copy, o.price_suspect, s.is_verified
+            FROM offers o
+            JOIN products p ON o.product_id = p.product_id
+            JOIN shops s ON o.shop_id = s.shop_id
+            WHERE p.product_id = ? AND o.price_toman IS NOT NULL
+            ORDER BY o.price_toman ASC
+        """, (active_product_id,)).fetchall()
+
+        if offers_rows:
+            scored_offers = []
+            for r in offers_rows:
+                cand_offer = {
+                    "price_toman": r[5], "warranty": r[10], "is_copy": r[12], "price_suspect": r[13],
+                }
+                q_score, q_badge, w_label = score_offer_quality(cand_offer, {"is_verified": r[14]})
+                scored_offers.append((q_score, r[5], q_badge, w_label, r))
+
+            # بالاترین امتیاز کیفیت
+            scored_offers.sort(key=lambda x: (x[0], -x[1]), reverse=True)
+            best_q = scored_offers[0]
+            cheapest = min(scored_offers, key=lambda x: x[1])
+
+            top_r = best_q[4]
+            top_shop_name = top_r[7]
+            top_location = top_r[8] or "تهران"
+            top_price_str = f"{to_fa_digits(f'{int(best_q[1]):,}')} تومان"
+            top_warranty = best_q[3]
+            cheap_price_str = f"{to_fa_digits(f'{int(cheapest[1]):,}')} تومان"
+            cheap_shop_name = cheapest[4][7]
+
+            msg = f"""در بررسی فروشگاه‌های بازار برای «{top_r[1]}»:\n\n"""
+            msg += f"""🥇 **جنس بهتر و برترین کیفیت (توصیه کارشناسی کَلَم):**\n"""
+            msg += f"""فروشگاه **{top_shop_name}** ({top_location})\n"""
+            msg += f"""• **قیمت:** {top_price_str}\n"""
+            msg += f"""• **گارانتی:** {top_warranty}\n"""
+            msg += f"""• **اصالت و اعتبار:** نسخه ۱۰۰٪ اورجینال شرکتی در فروشگاه دارای نماد اعتماد ترب\n\n"""
+
+            if cheapest[1] < best_q[1]:
+                diff_toman = best_q[1] - cheapest[1]
+                diff_str = f"{to_fa_digits(f'{int(diff_toman):,}')} تومان"
+                msg += f"""💡 **مقایسه با نسخه اقتصادی:**\n"""
+                msg += f"""ارزان‌ترین قیمت در بازار متعلق به فروشگاه **{cheap_shop_name}** با قیمت {cheap_price_str} است ({diff_str} ارزان‌تر)، اما {cheapest[3]} است. اگر سلامت و طول عمر دستگاه و گارانتی رسمی برایتان اولویت دارد، خرید از **{top_shop_name}** باکیفیت‌ترین گزینه است."""
+            else:
+                msg += f"""💡 **نکته طلایی:** این فروشگاه علاوه بر بالاترین سطح اصالت و گارانتی شرکتی، منصفانه‌ترین قیمت بازار را نیز ارائه می‌دهد."""
+
+            best_product_card = {
+                "product_id": top_r[0],
+                "title": top_r[1],
+                "category": top_r[2],
+                "brand": top_r[3],
+                "image_url": top_r[4],
+                "min_price": top_r[5],
+                "offline_shops_count": len(offers_rows),
+                "best_shop": {
+                    "shop_id": top_r[6],
+                    "name": top_r[7],
+                    "price": top_r[5],
+                    "hub": top_r[8],
+                    "parsed_address": {"mall_name": top_r[8] or "تهران", "floor_label": "فروشگاه حضوری"},
+                    "hours": "ساعت کاری ثبت‌شده",
+                    "distance_km": None,
+                    "quality_badge": best_q[2],
+                    "quality_score": best_q[0],
+                }
+            }
+            return {
+                "message": msg,
+                "active_product": best_product_card,
+                "suggested_prompts": [
+                    f"خرید از {top_shop_name}",
+                    "آیا همین مغازه این لوازم جانبی رو یکجا داره؟",
+                    "استعلام تلفنی قبل از مراجعه حضوری",
+                ]
+            }
+
+    # ب) استعلام موجودی یکجا از همان مغازه
+    is_same_shop_inquiry = any(w in norm_q for w in ("همین مغازه", "یکجا داره", "یک جا داره", "از همین مغازه", "این مغازه داره", "موجود داره"))
+    effective_sid = active_shop_id or (shop.get("shop_id") if shop else None)
+    if is_same_shop_inquiry and effective_sid:
+        s_row = cursor.execute("SELECT shop_id, name, location_label, address FROM shops WHERE shop_id = ?;", (effective_sid,)).fetchone()
+        target_sname = s_row[1] if s_row else "این فروشگاه"
+        target_loc = s_row[2] if s_row else "تهران"
+
+        # بررسی موجودی اقلام جانبی یا مکمل در همین مغازه
+        companion_rows = cursor.execute("""
+            SELECT p.product_id, p.persian_title, p.category_name, o.price_toman, o.warranty, o.is_copy
+            FROM offers o
+            JOIN products p ON o.product_id = p.product_id
+            WHERE o.shop_id = ? AND o.product_id != ? AND o.price_toman IS NOT NULL
+            ORDER BY o.price_toman ASC LIMIT 3
+        """, (effective_sid, active_product_id or "")).fetchall()
+
+        if companion_rows:
+            items_desc = "\n".join([f"• **{r[1]}** ({to_fa_digits(f'{int(r[3]):,}')} تومان)" for r in companion_rows])
+            msg = f"""بله! فروشگاه **{target_sname}** علاوه بر این کالا، اقلام جانبی و مصرفی زیر را نیز در همین مغازه موجود دارد:\n\n{items_desc}\n\n"""
+            msg += f"""🛍️ **مزیت خرید یکجا از همین مغازه:**\n"""
+            msg += f"""۱. **صرفه‌جویی در رفت‌وآمد:** همه اقلام را یکجا از پیشخوان {target_sname} تحویل می‌گیرید.\n"""
+            msg += f"""۲. **اهرم تخفیف تجمیعی:** هنگام تسویه فاکتور پای پوز، بخواهید به دلیل خرید چندقلمی، ۵ تا ۷ درصد تخفیف نقدی روی سرجمع اعمال کنند."""
+
+            rec_card = {
+                "product_id": companion_rows[0][0],
+                "title": companion_rows[0][1],
+                "category": companion_rows[0][2],
+                "brand": "",
+                "min_price": companion_rows[0][3],
+                "offline_shops_count": 1,
+                "best_shop": {
+                    "shop_id": effective_sid,
+                    "name": target_sname,
+                    "price": companion_rows[0][3],
+                    "hub": target_loc,
+                    "parsed_address": {"mall_name": target_loc, "floor_label": "همین مغازه"},
+                    "hours": "ساعت کاری ثبت‌شده",
+                    "distance_km": None,
+                    "is_same_shop": True,
+                    "same_shop_badge": f"🛍️ موجود در همین مغازه ({target_sname}) · خرید یکجا",
+                    "quality_badge": "🥇 جنس برتر و اورجینال (گارانتی معتبر شرکتی)" if companion_rows[0][5] == 0 else "نسخه اقتصادی",
+                }
+            }
+            return {
+                "message": msg,
+                "active_product": rec_card,
+                "suggested_prompts": [
+                    "تخفیف نقدی پای پوز در صورت خرید یکجا چقدر میشه؟",
+                    "کدوم مغازه جنس بهتر و اورجینال داره؟",
+                    "مسیر خرید رو تو پاساژ بچین",
+                ]
+            }
+        else:
+            alt_rows = cursor.execute("""
+                SELECT p.product_id, p.persian_title, s.shop_id, s.name, s.location_label, o.price_toman, o.warranty
+                FROM offers o
+                JOIN products p ON o.product_id = p.product_id
+                JOIN shops s ON o.shop_id = s.shop_id
+                WHERE s.location_label = ? AND s.shop_id != ? AND o.price_toman IS NOT NULL
+                ORDER BY o.price_toman ASC LIMIT 2
+            """, (target_loc, effective_sid)).fetchall()
+
+            msg = f"""فروشگاه **{target_sname}** در حال حاضر لوازم جانبی مستقل این کالا را در سیستم ثبت نکرده است.\n\n"""
+            if alt_rows:
+                alt = alt_rows[0]
+                msg += f"""📍 **نزدیک‌ترین فروشگاه در همین {target_loc}:**\n"""
+                msg += f"""فروشگاه **{alt[3]}** متعلقات سازگار را با قیمت {to_fa_digits(f'{int(alt[5]):,}')} تومان موجود دارد و در نزدیکی همین مغازه است."""
+
+            return {
+                "message": msg,
+                "active_product": product,
+                "suggested_prompts": [
+                    "کدوم مغازه جنس بهتر و اورجینال داره؟",
+                    "تخفیف نقدی پای پوز در خرید حضوری",
+                    "استعلام پلمپ و رجیستری در سامانه همتا",
+                ]
             }
 
     # ۱. تلاش برای دریافت پاسخ زنده و مقتدر از مدل هوش مصنوعی آنلاین (Arvan AlaaS / OpenAI)
