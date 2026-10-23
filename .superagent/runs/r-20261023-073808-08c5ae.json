@@ -1,0 +1,40 @@
+{
+  "gate": "ui-ux.a11y",
+  "status": "PASS",
+  "exit_code": 0,
+  "target": "http://127.0.0.1:8000/",
+  "metrics": {
+    "expected": 2,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "viewports": "desktop, mobile"
+  },
+  "findings": [],
+  "notes": [],
+  "artifacts": {
+    "results": "/Users/dazzle/torob/.superagent/runs/r-20261023-073808-08c5ae/0/results-saor25y8"
+  },
+  "provenance": {
+    "python": "3.13.5",
+    "platform": "Darwin",
+    "skill_version": "6.0.0",
+    "command": [
+      "/opt/anaconda3/bin/python3",
+      "/Users/dazzle/Desktop/cv/.antigravity/skills/super/modules/ui-ux/gates/a11y.py",
+      "--project",
+      "/Users/dazzle/torob",
+      "--json",
+      "--url",
+      "http://127.0.0.1:8000/"
+    ],
+    "scope": null,
+    "fingerprint_before": "4a3e80947ea93ce1",
+    "fingerprint_after": "4a3e80947ea93ce1"
+  },
+  "timing": {
+    "execution_s": 16.5768,
+    "fingerprint_before_s": 0.0758,
+    "fingerprint_after_s": 0.1147
+  }
+}

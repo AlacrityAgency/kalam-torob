@@ -46,3 +46,12 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Environment & Secrets (Keep API keys strictly private)
+.env
+.env.*
+!.env.example
+*.env
+*.pem
+*.key
+

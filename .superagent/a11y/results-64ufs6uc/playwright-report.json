@@ -1,0 +1,165 @@
+{
+  "config": {
+    "argv": [
+      "/usr/local/bin/node",
+      "/Users/dazzle/Desktop/cv/.antigravity/skills/super/node_modules/.bin/playwright",
+      "test",
+      "/Users/dazzle/Desktop/cv/.antigravity/skills/super/modules/ui-ux/gates/playwright/a11y.spec.js",
+      "--config",
+      "/Users/dazzle/Desktop/cv/.antigravity/skills/super/playwright.config.js",
+      "--output",
+      "/Users/dazzle/torob/.superagent/a11y/results-64ufs6uc/artifacts"
+    ],
+    "configFile": "/Users/dazzle/Desktop/cv/.antigravity/skills/super/playwright.config.js",
+    "rootDir": "/Users/dazzle/Desktop/cv/.antigravity/skills/super",
+    "failOnFlakyTests": false,
+    "forbidOnly": true,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 2
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/dazzle/torob/.superagent/a11y/results-64ufs6uc/artifacts",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "desktop",
+        "name": "desktop",
+        "testDir": "/Users/dazzle/Desktop/cv/.antigravity/skills/super",
+        "testIgnore": [
+          "**/node_modules/**",
+          "**/.superagent/**"
+        ],
+        "testMatch": [
+          "/.*\\.spec\\.(js|ts)/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/dazzle/torob/.superagent/a11y/results-64ufs6uc/artifacts",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "mobile",
+        "name": "mobile",
+        "testDir": "/Users/dazzle/Desktop/cv/.antigravity/skills/super",
+        "testIgnore": [
+          "**/node_modules/**",
+          "**/.superagent/**"
+        ],
+        "testMatch": [
+          "/.*\\.spec\\.(js|ts)/"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "json",
+        {
+          "outputFile": "/Users/dazzle/torob/.superagent/a11y/results-64ufs6uc/playwright-report.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 4,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "modules/ui-ux/gates/playwright/a11y.spec.js",
+      "file": "modules/ui-ux/gates/playwright/a11y.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "accessibility gate",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6249,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-23T05:50:25.866Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            },
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile",
+              "projectName": "mobile",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 6205,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-23T05:50:25.876Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "6cb687246d8ddaa1ec01-29dcf05d09c4a0794442",
+          "file": "modules/ui-ux/gates/playwright/a11y.spec.js",
+          "line": 46,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-23T05:50:24.927Z",
+    "duration": 7817.597,
+    "expected": 2,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

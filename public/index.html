@@ -85,30 +85,37 @@
   </footer>
 
   <!-- دستیار گفتگو -->
-  <button type="button" class="assistant-fab" id="assistant-fab" aria-controls="assistant" aria-expanded="false">
+  <button type="button" class="assistant-fab" id="assistant-fab" aria-controls="assistant" aria-expanded="false" aria-label="دستیار هوشمند خرید کَلَم">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4V5Z"/><path d="M8 10h8M8 13h5"/></svg>
     <span>دستیار کَلَم</span>
   </button>
 
-  <aside class="assistant" id="assistant" aria-label="دستیار کَلَم" hidden>
+  <aside class="assistant" id="assistant" aria-label="دستیار خرید حضوری کَلَم" hidden>
     <div class="assistant-head">
-      <img src="./logo.jpg" alt="" width="32" height="32">
-      <div class="assistant-title">
-        <strong>دستیار کَلَم</strong>
-        <span>پاسخ‌ها فقط از داده‌های فروشگاه‌های ترب</span>
+      <div class="assistant-avatar">
+        <img src="./logo.jpg" alt="لوگوی کَلَم" width="34" height="34">
+        <span class="assistant-status-dot" title="متصل به هوش مصنوعی کَلَم"></span>
       </div>
-      <button type="button" class="icon-btn" data-action="clear-chat" title="پاک کردن گفتگو" aria-label="پاک کردن گفتگو">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
-      </button>
-      <button type="button" class="icon-btn" data-action="close-assistant" aria-label="بستن دستیار">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
-      </button>
+      <div class="assistant-title">
+        <div class="assistant-title-row">
+          <strong>دستیار کَلَم</strong>
+          <span id="assistant-context" class="assistant-context-pill" hidden></span>
+        </div>
+        <span>پاسخ‌ها مستقیماً بر مبنای داده‌های خرید حضوری ترب</span>
+      </div>
+      <div class="assistant-actions">
+        <button type="button" class="icon-btn" data-action="clear-chat" title="پاک کردن گفتگو" aria-label="پاک کردن گفتگو">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+        </button>
+        <button type="button" class="icon-btn" data-action="close-assistant" title="بستن دستیار" aria-label="بستن دستیار">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
     </div>
     <div class="assistant-body" id="chat-messages" aria-live="polite"></div>
-    <div class="assistant-prompts" id="chat-prompts"></div>
     <form class="assistant-input" id="chat-form">
-      <input type="text" id="chat-input" placeholder="مثلاً: مغازه بسته بود، جایگزین می‌خوام" autocomplete="off" aria-label="پیام به دستیار">
-      <button type="submit" class="btn btn-primary" aria-label="ارسال">
+      <input type="text" id="chat-input" placeholder="مثلاً: آیفون ۱۶ قسطی در چارسو یا دریل رونیکس..." autocomplete="off" aria-label="پیام به دستیار هوشمند کلم">
+      <button type="submit" class="btn btn-primary" aria-label="ارسال پیام">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12 4 4l3 8-3 8 16-8ZM7 12h6"/></svg>
       </button>
     </form>

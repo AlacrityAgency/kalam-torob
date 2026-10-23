@@ -7,6 +7,12 @@ import os
 import sqlite3
 from typing import List, Literal, Optional
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -21,12 +27,13 @@ from .algorithms.indp import DIAGNOSTIC_TREES, detect_ambiguous_intent
 from .algorithms.ip_crp import InPersonCartRouter
 from .algorithms.offer_quality import flatten_specs
 from .algorithms.paco import calculate_paco_score
+from .algorithms.prompt_generator import extract_model_and_brand, generate_dynamic_prompts
 from .algorithms.svdp import INQUIRY_QUESTIONS, compute_stock_certainty, generate_inquiry_dossier, simulate_inquiry
 from .algorithms.tfra import find_emergency_fallbacks
 from .agent import follow_up
 from .assistant import KalamAssistant
 from .nlu import llm_enabled
-from .search import search_products, tokenize
+from .search import SEARCH_STOPWORDS, search_products, tokenize
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # برای دیپلوی می‌توان پایگاه داده را روی دیسک دائمی گذاشت (مثلاً /data/torob.db)
@@ -185,7 +192,7 @@ def search_endpoint(
     جستجوی کالا با شرایط خرید. ترتیب نتایج = ارتباط FTS5. کمترین قیمت از آفرهای سالم و منطبق با شرایط.
     hub می‌تواند نام محدوده (location_label) یا نام پاساژ داخل آدرس باشد.
     """
-    tokens = tokenize(q)
+    tokens = tokenize(q, stopwords=SEARCH_STOPWORDS)
     filters = {
         "place": hub, "min_price": min_price, "max_price": max_price, "credit": credit,
         "provider": canonical_provider(provider), "fresh": fresh, "hours_known": hours_known,
@@ -262,9 +269,13 @@ def get_product_details(product_id: str, hub: Optional[str] = Query(None, max_le
         ORDER BY o.is_copy, o.price_suspect, o.price_toman IS NULL, o.price_toman ASC
     """, (product_id,)).fetchall()
 
+    hub_val = hub if isinstance(hub, str) else ""
+    lat_val = lat if isinstance(lat, (int, float)) else None
+    lon_val = lon if isinstance(lon, (int, float)) else None
+
     offers_list = []
     for r in map(dict, rows):
-        dist = distance_km(lat, lon, r["shop_lat"], r["shop_lon"])
+        dist = distance_km(lat_val, lon_val, r["shop_lat"], r["shop_lon"])
         offers_list.append({
             "offer_id": r["offer_id"],
             "price_toman": r["price_toman"],
@@ -293,7 +304,7 @@ def get_product_details(product_id: str, hub: Optional[str] = Query(None, max_le
             WHERE offer_count = 0 AND category_names LIKE ?
             ORDER BY (location_label = ?) DESC, is_verified DESC, hours_known DESC
             LIMIT 6
-        """, (f"%{prod['category_name']}%", hub or "")).fetchall()
+        """, (f"%{prod['category_name']}%", hub_val)).fetchall()
         category_only = [_shop_public(dict(r)) for r in cand]
 
     # پیشنهاد کلم: بهترین ترکیب قیمت، نزدیکی، باز بودن و تازگی قیمت، با دلیل
@@ -347,13 +358,40 @@ def get_complementary_items(product_id: str, shop_id: Optional[str] = None,
     """, (product_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="محصول مبدأ یافت نشد.")
-    base_product = {"product_id": row[0], "title": row[1], "category_name": row[2], "brand_name": row[3], "price": row[4] or 0}
+    meta = extract_model_and_brand(row[1], row[3])
+    base_product = {
+        "product_id": row[0],
+        "title": row[1],
+        "category_name": row[2],
+        "brand_name": row[3],
+        "price": row[4] or 0,
+        "core_model": meta.get("core_model"),
+    }
+    core_model = meta.get("core_model") or ""
 
     base_shop = {}
     if shop_id:
         s_row = cursor.execute("SELECT shop_id, name, address, location_label FROM shops WHERE shop_id = ?;", (shop_id,)).fetchone()
         if s_row:
             base_shop = {"shop_id": s_row[0], "name": s_row[1], "address": s_row[2], "location_label": s_row[3]}
+
+    # ۱. فراخوانی موتور هوش مصنوعی کالا (DCA) با پوشش ۱۰۰٪ اجناس کاتالوگ
+    from .algorithms.ai_product_intelligence import find_grounded_complementary_items
+    scored, ai_prompts = find_grounded_complementary_items(conn, base_product, base_shop, limit=8)
+    for cand in scored:
+        cand["reason"] = cand.get("ai_reason") or cand.get("reason")
+        cand["location_description"] = cand.get("location_desc") or cand.get("loc_desc")
+        if "parsed_address" not in cand:
+            cand["parsed_address"] = parse_mall_address(cand.get("address"), cand.get("location_label"))
+
+    if scored:
+        return {
+            "base_product": base_product,
+            "complementary_count": len(scored),
+            "recommendations": scored[:8],
+            "in_store_prompts": ai_prompts,
+            "source": "ai_dynamic_architecture",
+        }
 
     rules = cursor.execute("""
         SELECT target_pattern, dep_score, description_fa FROM complementary_rules WHERE ? LIKE source_pattern
@@ -363,7 +401,6 @@ def get_complementary_items(product_id: str, shop_id: Optional[str] = None,
 
     best_by_product = {}
     for target_pattern, dep_score, reason in rules:
-        # الگو اول روی جدول کوچک دسته‌ها اعمال می‌شود؛ بعد کوئری کالا از ایندکس category_name استفاده می‌کند
         cats = [r[0] for r in cursor.execute(
             "SELECT category_name FROM categories WHERE category_name LIKE ? AND category_name != ?",
             (target_pattern, base_product["category_name"]))]
@@ -378,9 +415,9 @@ def get_complementary_items(product_id: str, shop_id: Optional[str] = None,
             JOIN shops s ON o.shop_id = s.shop_id
             WHERE p.category_name IN ({ph})
               AND o.price_toman IS NOT NULL AND o.is_copy = 0 AND o.price_suspect = 0
-            ORDER BY (s.shop_id = ?) DESC, (s.location_label = ?) DESC, o.price_toman ASC
+            ORDER BY (s.shop_id = ?) DESC, (p.persian_title LIKE ?) DESC, (s.location_label = ?) DESC, o.price_toman ASC
             LIMIT 120
-        """, (*cats, shop_id or "", base_shop.get("location_label") or "")).fetchall()
+        """, (*cats, shop_id or "", f"%{core_model}%", base_shop.get("location_label") or "")).fetchall()
         for c in candidates:
             cand = {
                 "product_id": c[0], "title": c[1], "category_name": c[2], "brand_name": c[3], "price_toman": c[4],
@@ -398,12 +435,79 @@ def get_complementary_items(product_id: str, shop_id: Optional[str] = None,
                 "reason": reason,
                 "location_description": details["location_description"],
                 "freshness_badge": details["freshness_badge"],
+                "bundle_bonus": details.get("bundle_bonus", 1.0),
+                "bundle_eligible": details.get("bundle_eligible", False),
+                "cognitive_role": details.get("cognitive_role"),
+                "cognitive_category": details.get("cognitive_category"),
+                "bargaining_tip": details.get("bargaining_tip"),
                 "parsed_address": parse_mall_address(cand["address"], cand["location_label"]),
             })
             best_by_product[cand["product_id"]] = cand
 
     scored = sorted(best_by_product.values(), key=lambda x: x["paco_score"], reverse=True)
     return {"base_product": base_product, "complementary_count": len(scored), "recommendations": scored[:8]}
+
+
+@app.get("/api/prompts")
+def get_prompts_endpoint(
+    product_id: Optional[str] = None,
+    shop_id: Optional[str] = None,
+    cart_product_ids: Optional[str] = None,
+    hub: Optional[str] = None,
+    conn: sqlite3.Connection = Depends(get_db),
+):
+    """
+    الگوریتم تولید داینامیک سوالات آماده و راهنما (DCPG) متناسب با کالا، فروشگاه و سبد خرید
+    """
+    cursor = conn.cursor()
+    product = None
+    shop = None
+    cart_items = []
+
+    if product_id:
+        p_row = cursor.execute("""
+            SELECT product_id, persian_title, category_name, brand_name
+            FROM products WHERE product_id = ?
+        """, (product_id,)).fetchone()
+        if p_row:
+            product = {
+                "product_id": p_row[0],
+                "title": p_row[1],
+                "category_name": p_row[2],
+                "brand_name": p_row[3],
+            }
+
+    if shop_id:
+        s_row = cursor.execute("""
+            SELECT shop_id, name, address, location_label
+            FROM shops WHERE shop_id = ?
+        """, (shop_id,)).fetchone()
+        if s_row:
+            shop = {
+                "shop_id": s_row[0],
+                "name": s_row[1],
+                "address": s_row[2],
+                "location_label": s_row[3],
+                "parsed_address": parse_mall_address(s_row[2], s_row[3]),
+            }
+
+    if cart_product_ids:
+        c_ids = [i.strip() for i in cart_product_ids.split(",") if i.strip()]
+        if c_ids:
+            ph = ",".join("?" * len(c_ids))
+            c_rows = cursor.execute(f"""
+                SELECT product_id, persian_title, category_name, brand_name
+                FROM products WHERE product_id IN ({ph})
+            """, c_ids).fetchall()
+            cart_items = [{"product_id": r[0], "title": r[1], "category_name": r[2], "brand_name": r[3]} for r in c_rows]
+
+    prompts = generate_dynamic_prompts(
+        product=product,
+        shop=shop,
+        cart_items=cart_items,
+        mall_name=hub,
+    )
+    return {"prompts": prompts}
 
 
 @app.get("/api/wayfinding/{shop_id}")
@@ -499,7 +603,7 @@ def inquiry_questions():
 def get_need_diagnose(q: Optional[str] = None):
     """الگوریتم ۵: غربالگری تعاملی نیاز مبهم (INDP)"""
     if q:
-        intent = detect_ambiguous_intent(q, tokens=tokenize(q))
+        intent = detect_ambiguous_intent(q, tokens=tokenize(q, stopwords=SEARCH_STOPWORDS))
         if intent["needs_decoupling"]:
             return {"active_tree": intent["tree"], "category_key": intent["category_key"], "all_trees": DIAGNOSTIC_TREES}
     return {"all_trees": DIAGNOSTIC_TREES}

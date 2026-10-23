@@ -327,7 +327,7 @@ class KalamApp {
         case "set-hub": this.setHub(d.hub || null); break;
         case "add-cart": this.addToCart(d.id); break;
         case "remove-cart": this.removeFromCart(d.id); break;
-        case "clear-cart": this.cart = []; this.saveCart(); this.renderCart(); break;
+        case "clear-cart": this.cart = []; this.saveCart(); this.renderCart(); this.renderChatPrompts(); break;
         case "strategy": this.strategy = d.strategy; this.renderCart(); break;
         case "sort": this.searchState.sort = d.sort; this.renderResults(); break;
         case "search-condition": this.toggleSearchCondition(d.key); break;
@@ -970,15 +970,23 @@ class KalamApp {
           <div class="h-scroll">
             ${this.uniqueByProduct(comp.recommendations).map((c) => `
               <a class="mini-card" href="#/product/${encodeURIComponent(c.product_id)}">
-                ${c.reason ? `<span class="tag tag-gray">${esc(c.reason)}</span>` : ""}
+                ${c.cognitive_category ? `<span class="tag ${c.cognitive_role === 'protective' ? 'tag-accent' : (c.bundle_eligible ? 'tag-primary' : 'tag-gray')}">${esc(c.cognitive_category)}</span>` : (c.reason ? `<span class="tag tag-gray">${esc(c.reason)}</span>` : "")}
                 <h3 class="product-title">${esc(c.title)}</h3>
                 <div class="product-price">${priceHtml(c.price_toman)}</div>
                 <div class="where">${esc(c.shop_name)} · ${esc(c.location_description || c.location_label || "")}</div>
+                ${c.bargaining_tip ? `<div style="font-size:10px; color:var(--primary); margin-top:4px; font-weight:500;">💡 ${esc(c.bargaining_tip)}</div>` : ""}
               </a>`).join("")}
           </div>
         </section>` : ""}
       </div>`, p.title);
     this.renderSellers();
+    getJSON(`/api/prompts?product_id=${encodeURIComponent(id)}${this.hub ? `&hub=${encodeURIComponent(this.hub)}` : ""}`)
+      .then((res) => {
+        if (res && res.prompts && res.prompts.length) {
+          this.renderChatPrompts(res.prompts);
+        }
+      })
+      .catch(() => {});
   }
 
   placeMatches(place, shop) {
@@ -1325,16 +1333,23 @@ class KalamApp {
 
   addToCart(id) {
     if (this.cart.some((c) => c.id === id)) return this.toast("این کالا در سبد شماست.");
-    const info = this.productCache[id] || { id, title: "", price: 0, image: null };
-    this.cart.push({ id, title: info.title, price: info.price, image: info.image });
+    const info = this.productCache[id] || { id, title: "", price: 0, image: null, category: "" };
+    this.cart.push({ id, title: info.title, price: info.price, image: info.image, category: info.category || "" });
     this.saveCart();
     this.toast("به سبد خرید حضوری اضافه شد.", "success");
+    document.querySelectorAll(`.msg-card-btn[data-id="${id}"]`).forEach((b) => {
+      b.classList.add("btn-added");
+      b.textContent = "✓ افزوده شد";
+    });
+    this.updateAssistantContext();
+    this.renderChatPrompts();
     if (location.hash.startsWith("#/product/") || location.hash.startsWith("#/compare")) this.route();
   }
 
   removeFromCart(id) {
     this.cart = this.cart.filter((c) => c.id !== id);
     this.saveCart();
+    this.renderChatPrompts();
     this.renderCart();
   }
 
@@ -1544,36 +1559,156 @@ class KalamApp {
     panel.hidden = !open;
     fab.setAttribute("aria-expanded", String(open));
     if (open) {
+      this.updateAssistantContext();
+      this.renderChatPrompts();
       if (!document.getElementById("chat-messages").children.length) this.greet();
       document.getElementById("chat-input").focus();
     }
   }
 
   greet() {
-    this.appendMsg("bot", "سلام! من کَلَم هستم. کالا، محدوده، بودجه و شرط قسطی را در یک جمله بگویید (مثلاً «گوشی A55 قسطی در چارسو تا ۲۵ میلیون»)؛ ارزان‌ترین مغازه حضوری، طبقه، واحد و ساعت کاری‌اش را پیدا می‌کنم. سؤال بعدی‌تان («ارزون‌ترش؟») روی همان جستجو اعمال می‌شود.");
+    const starters = this.getDynamicPrompts();
+    this.appendMsg(
+      "bot",
+      "سلام! من کَلَم هستم، مشاور خرید حضوری شما در بازار تهران. نام کالا، محدوده، بودجه و شرایط قسطی را بگویید (مثلاً «گوشی A55 قسطی در چارسو تا ۲۵ میلیون»)؛ ارزان‌ترین مغازه معتبر، ساعت کاری، استعلام گارانتی و مسیر دقیق مغازه را به شما نشان می‌دهم.",
+      "",
+      starters
+    );
   }
 
   clearChat() {
     document.getElementById("chat-messages").innerHTML = "";
     this.chatState = null;
     this.tree = null;
+    this.activeProductId = null;
+    this.currentProduct = null;
     this.loc = readStore(LS_LOC, null);
     this.compare = readStore(LS_COMPARE, []);
+    this.updateAssistantContext();
+    this.renderChatPrompts();
     this.greet();
   }
 
-  renderChatPrompts() {
-    document.getElementById("chat-prompts").innerHTML = CHAT_PROMPTS
-      .map((t) => `<button type="button" class="chip" data-action="chat-prompt" data-text="${esc(t)}">${esc(t)}</button>`).join("");
+  updateAssistantContext() {
+    const el = document.getElementById("assistant-context");
+    if (!el) return;
+    const prod = this.currentProduct || (this.cart && this.cart.length ? this.cart[this.cart.length - 1] : null);
+    if (prod && (prod.title || prod.persian_title)) {
+      const title = prod.title || prod.persian_title;
+      const match = title.match(/(?:آیفون|iPhone)\s*(?:۱[۱-۷]|\d{1,2})(?:\s*(?:پرو\s*مکس|پرو|پلاس|Pro\s*Max|Pro|Plus))?|[A-Z]\d{2,3}(?:\s*(?:5G|4G|Ultra|Plus|FE))?|ردمی\s+نوت\s+\d+|Redmi\s+Note\s+\d+|Poco\s+[A-Z]\d+/i);
+      const label = match ? match[0].trim() : title.slice(0, 20);
+      el.textContent = label;
+      el.hidden = false;
+    } else if (this.hub) {
+      el.textContent = `📍 ${this.hub}`;
+      el.hidden = false;
+    } else {
+      el.hidden = true;
+    }
   }
 
-  appendMsg(role, text, extraHtml = "") {
+  getDynamicPrompts(customPrompts = null) {
+    if (customPrompts && customPrompts.length) {
+      return customPrompts;
+    }
+    const target = this.currentProduct || (this.cart && this.cart.length ? this.cart[this.cart.length - 1] : null);
+    if (target || (this.cart && this.cart.length > 0)) {
+      const prompts = [];
+      const title = (target ? (target.title || target.persian_title || "") : "").toLowerCase();
+      const cat = (target ? (target.category || target.category_name || "") : "").toLowerCase();
+      const cartText = this.cart.map((c) => `${c.title || ""} ${c.category || ""}`).join(" ").toLowerCase();
+      const fullText = `${title} ${cat} ${cartText}`;
+
+      // استخراج هوشمند مدل از عنوان کالا
+      let modelLabel = "";
+      const rawTitle = target ? (target.title || target.persian_title || "") : "";
+      const modelMatch = rawTitle.match(/(?:آیفون|iPhone)\s*(?:۱[۱-۷]|\d{1,2})(?:\s*(?:پرو\s*مکس|پرو|پلاس|Pro\s*Max|Pro|Plus))?|[A-Z]\d{2,3}(?:\s*(?:5G|4G|Ultra|Plus|FE))?|ردمی\s+نوت\s+\d+|Redmi\s+Note\s+\d+|Poco\s+[A-Z]\d+/i);
+      if (modelMatch) {
+        modelLabel = " " + modelMatch[0].trim();
+      }
+
+      if (fullText.includes("گوشی") || fullText.includes("موبایل") || fullText.includes("سامسونگ") || fullText.includes("نوکیا") || fullText.includes("آیفون")) {
+        prompts.push(`گلس و کاور مناسب${modelLabel}`);
+        if (fullText.includes("آیفون") || fullText.includes("iphone")) {
+          prompts.push("آداپتور ۲۰ وات اصل اپل و محافظ لنز");
+          prompts.push("استعلام پلمپ و رجیستری در سامانه همتا");
+        } else {
+          prompts.push("شارژر دیواری فست ۲۵ وات اصلی");
+          prompts.push("استعلام پلمپ و گارانتی شرکتی");
+        }
+        prompts.push("تخفیف روی خرید قاب و گلس");
+      }
+      if (fullText.includes("دریل") || fullText.includes("پیچ گوشتی") || fullText.includes("فرز") || fullText.includes("ابزار") || fullText.includes("آچار") || fullText.includes("جوش")) {
+        prompts.push(`ست مته و متعلقات${modelLabel}`);
+        prompts.push("تست روشن شدن و صدای گیربکس");
+        prompts.push("تخفیف نقدی پای پوز روی متعلقات");
+        prompts.push("عینک ایمنی و ابزار کارگاهی");
+      }
+      if (fullText.includes("ساعت") || fullText.includes("مچی") || fullText.includes("هوشمند")) {
+        prompts.push(`بند و محافظ صفحه مناسب${modelLabel}`);
+        prompts.push("تست آب‌بندی و سلامت موتور در مغازه");
+        prompts.push("کارت گارانتی معتبر و جعبه اصلی");
+        prompts.push("تخفیف خرید بند اضافه پای پوز");
+      }
+      if (fullText.includes("سیم") || fullText.includes("کابل") || fullText.includes("مفتول")) {
+        prompts.push("فیوز مینیاتوری متناسب با این سیم");
+        prompts.push("درصد خلوص مس و استاندارد کابل در فاکتور");
+        prompts.push("چسب برق نسوز و داکت ساختمانی");
+      }
+      if (fullText.includes("لپ تاپ") || fullText.includes("نوت بوک")) {
+        prompts.push(`کوله ضربه‌گیر مناسب${modelLabel}`);
+        prompts.push("ماوس بی‌سیم از مرکز کامپیوتر");
+        prompts.push("تخفیف روی خرید کیف و لوازم جانبی با لپ‌تاپ");
+      }
+      if (fullText.includes("کتانی") || fullText.includes("کتونی") || fullText.includes("کفش")) {
+        prompts.push(`جوراب نانو و کفی طبی${modelLabel}`);
+        prompts.push("امکان تست پاخور و سایزبندی در مغازه");
+      }
+      if (fullText.includes("دوربین") || fullText.includes("مداربسته")) {
+        prompts.push("فیش BNC و آداپتور ۱۲ ولت صنعتی");
+        prompts.push("هارد دیسک نظارتی بنفش");
+      }
+      if (fullText.includes("پمپ")) {
+        prompts.push("ست‌کنترل اتوماتیک و منبع انبساط");
+        prompts.push("پنج‌راهی برنجی و نوار تفلون");
+      }
+
+      if (this.cart.length >= 2) {
+        prompts.push("مسیر بهینه پیاده‌روی بین این مغازه‌ها رو بچین");
+        prompts.push("کدوم پاساژ همه این اقلام رو یکجا داره؟");
+      } else {
+        prompts.push("اقلام مکمل برای تکمیل این خرید چیه؟");
+      }
+      prompts.push("کی برم که همه مغازه‌ها باز باشن؟");
+
+      return [...new Set(prompts)].slice(0, 5);
+    }
+    return CHAT_PROMPTS;
+  }
+
+  renderChatPrompts(customPrompts = null) {
+    const box = document.getElementById("chat-prompts");
+    if (!box) return;
+    box.innerHTML = "";
+  }
+
+  appendMsg(role, text, extraHtml = "", prompts = null) {
     const box = document.getElementById("chat-messages");
     const div = document.createElement("div");
     div.className = `msg msg-${role}`;
     // متن پیام همیشه ایمن‌سازی می‌شود؛ فقط **پررنگ** پشتیبانی می‌شود
     const safe = esc(text).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\n/g, "<br>");
-    div.innerHTML = `${safe ? `<div>${safe}</div>` : ""}${extraHtml ? `<div class="msg-extra">${extraHtml}</div>` : ""}`;
+    let promptsHtml = "";
+    if (prompts && prompts.length) {
+      promptsHtml = `
+        <div class="msg-suggestions">
+          <span class="msg-suggestions-label">💡 پیشنهادهای گفتگو:</span>
+          <div class="msg-suggestions-chips">
+            ${prompts.map((p) => `<button type="button" class="suggestion-chip" data-action="chat-prompt" data-text="${esc(p)}">${esc(p)}</button>`).join("")}
+          </div>
+        </div>`;
+    }
+    div.innerHTML = `${safe ? `<div>${safe}</div>` : ""}${extraHtml ? `<div class="msg-extra">${extraHtml}</div>` : ""}${promptsHtml}`;
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
     return div;
@@ -1598,7 +1733,17 @@ class KalamApp {
       });
       loading.remove();
       // حافظه گفتگو: وضعیت جستجو برای پیام بعدی («ارزون‌ترش کدومه؟») نگه داشته می‌شود
-      if (data.state !== undefined) this.chatState = data.state;
+      if (data.state !== undefined) {
+        this.chatState = data.state;
+        if (data.state && data.state.active_product_id) {
+          this.activeProductId = data.state.active_product_id;
+        }
+      }
+      if (data.products && data.products.length) {
+        this.activeProductId = data.products[0].product_id;
+        this.currentProduct = data.products[0];
+        this.updateAssistantContext();
+      }
       this.renderBotResponse(data);
     } catch (e) {
       loading.remove();
@@ -1662,24 +1807,50 @@ class KalamApp {
           </div>
           <button type="button" class="btn btn-ghost btn-sm" data-action="wayfinding" data-shop="${esc(s.shop_id)}">مسیر</button>
         </div>`).join("");
-    } else if (data.type === "product_search" && data.products) {
+    } else if ((data.type === "product_search" || data.type === "consultation") && data.products && data.products.length) {
       data.products.forEach((p) => { this.productCache[p.product_id] = { id: p.product_id, title: p.title, price: p.min_price, image: null }; });
       extra = data.products.slice(0, 4).map((p) => {
         const b = p.best_shop;
+        const inCart = this.cart.some((c) => c.id === p.product_id);
         return `
         <div class="msg-card">
-          <div>
-            <strong><a href="#/product/${encodeURIComponent(p.product_id)}">${esc(p.title)}</a></strong>
-            <span class="faint">${b ? `${faNum(b.price)} تومان · ${esc(b.name)} · ${esc(b.parsed_address.mall_name)}، ${esc(b.parsed_address.floor_label)}` : "قیمت نامشخص"}</span>
-            ${b ? `<span class="faint">${esc(b.hours)}${b.distance_km !== null && b.distance_km !== undefined ? ` · ${kmText(b.distance_km)} از شما` : ""} · ${faNum(p.offline_shops_count)} فروشگاه</span>` : ""}
+          <div class="msg-card-content">
+            <strong class="msg-card-title"><a href="#/product/${encodeURIComponent(p.product_id)}">${esc(p.title)}</a></strong>
+            <div class="msg-card-meta">
+              <span class="msg-card-price">${b ? `${faNum(b.price)} <small>تومان</small>` : "قیمت نامشخص"}</span>
+              ${b ? `<span class="msg-card-shop">${esc(b.name)} · ${esc(b.parsed_address.mall_name)}، ${esc(b.parsed_address.floor_label)}</span>` : ""}
+            </div>
+            ${b ? `<div class="msg-card-sub"><span class="faint">${b.distance_km !== null && b.distance_km !== undefined ? `📍 ${kmText(b.distance_km)} از شما · ` : ""}${esc(b.hours)} · ${faNum(p.offline_shops_count)} فروشگاه</span></div>` : ""}
           </div>
-          <button type="button" class="btn btn-outline btn-sm" data-action="add-cart" data-id="${esc(p.product_id)}">افزودن</button>
+          <button type="button" class="btn btn-outline btn-sm msg-card-btn ${inCart ? 'btn-added' : ''}" data-action="add-cart" data-id="${esc(p.product_id)}">${inCart ? '✓ افزوده شد' : 'افزودن'}</button>
+        </div>`;
+      }).join("");
+    } else if (data.type === "complementary_recommendations" && data.recommendations) {
+      data.recommendations.forEach((p) => { this.productCache[p.product_id] = { id: p.product_id, title: p.title, price: p.price_toman, image: null }; });
+      extra = data.recommendations.slice(0, 4).map((p) => {
+        const inCart = this.cart.some((c) => c.id === p.product_id);
+        return `
+        <div class="msg-card">
+          <div class="msg-card-content">
+            ${p.cognitive_category ? `<span class="badge ${p.cognitive_role === 'protective' ? 'badge-accent' : (p.bundle_eligible ? 'badge-primary' : 'badge-gray')}" style="display:inline-block; margin-bottom:3px; font-size:10px;">${esc(p.cognitive_category)}</span>` : ""}
+            <strong class="msg-card-title"><a href="#/product/${encodeURIComponent(p.product_id)}">${esc(p.title)}</a></strong>
+            <div class="msg-card-meta">
+              <span class="msg-card-price">${faNum(p.price_toman)} <small>تومان</small></span>
+              <span class="msg-card-shop">${esc(p.shop_name)} · ${esc(p.location_description || (p.parsed_address ? `${p.parsed_address.mall_name}، ${p.parsed_address.floor_label}` : ""))}</span>
+            </div>
+            ${p.bargaining_tip ? `<div style="font-size:11px; color:var(--primary); margin-top:2px; font-weight:600;">💡 ${esc(p.bargaining_tip)}</div>` : (p.reason ? `<span class="badge badge-gray" style="display:inline-block; margin-top:3px; font-size:11px;">${esc(p.reason)}</span>` : "")}
+          </div>
+          <button type="button" class="btn btn-outline btn-sm msg-card-btn ${inCart ? 'btn-added' : ''}" data-action="add-cart" data-id="${esc(p.product_id)}">${inCart ? '✓ افزوده شد' : 'افزودن'}</button>
         </div>`;
       }).join("");
     }
-    const source = data.nlu === "claude" ? "درک پیام: Claude" : data.nlu === "local" ? "درک پیام: پارسر محلی" : "";
+    const source = data.nlu === "arvan" ? "درک هوشمند: ابر آروان (AIaaS)" :
+                   data.nlu === "openai" ? "درک هوشمند: OpenAI" :
+                   data.nlu === "claude" ? "درک هوشمند: Claude" :
+                   data.nlu === "local" ? "درک پیام: الگوریتم محلی" : "";
     if (source && data.type !== "text") extra += `<span class="msg-source">${source}</span>`;
-    this.appendMsg("bot", data.message || "", extra);
+    const prompts = data.suggested_prompts && data.suggested_prompts.length ? data.suggested_prompts : null;
+    this.appendMsg("bot", data.message || "", extra, prompts);
   }
 
   /* ---------- Toast ---------- */

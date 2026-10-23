@@ -1,0 +1,34 @@
+{
+  "gate": "ui-ux.a11y",
+  "status": "NOT-TESTED",
+  "exit_code": 2,
+  "target": "http://127.0.0.1:8000/",
+  "metrics": {},
+  "findings": [],
+  "notes": [
+    "Target unreachable (<urlopen error [Errno 61] Connection refused>). Start the dev server and retry."
+  ],
+  "artifacts": {},
+  "provenance": {
+    "python": "3.13.5",
+    "platform": "Darwin",
+    "skill_version": "6.0.0",
+    "command": [
+      "/opt/anaconda3/bin/python3",
+      "/Users/dazzle/Desktop/cv/.antigravity/skills/super/modules/ui-ux/gates/a11y.py",
+      "--project",
+      "/Users/dazzle/torob",
+      "--json",
+      "--url",
+      "http://127.0.0.1:8000/"
+    ],
+    "scope": null,
+    "fingerprint_before": "5ee28c2b7060db66",
+    "fingerprint_after": "5ee28c2b7060db66"
+  },
+  "timing": {
+    "execution_s": 0.1678,
+    "fingerprint_before_s": 0.032,
+    "fingerprint_after_s": 0.0267
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "mission": "Universal AI-Driven Product Intelligence & Dynamic Companion Architecture (DCA)",
+  "problem_statement": "Eliminate static, hardcoded complementary and prompt rule tables. Build a scalable, zero-shot algorithmic system where AI analyzes any product in Torob dynamically, deduces companion purchase intents, generates contextual prompt chips, and grounds them in real offline catalog inventory.",
+  "roles": [
+    {
+      "name": "Chief Recommendation Architect (CRA)",
+      "responsibility": "Design the mathematical and architectural formulation of Dynamic Zero-Shot Product Understanding vs Static Rule Catalogs."
+    },
+    {
+      "name": "Catalog & Grounding Engineer (CGE)",
+      "responsibility": "Bridge open-ended AI companion proposals with physical SQLite catalog inventory via FTS5 and PACO scoring without hallucination."
+    },
+    {
+      "name": "Performance & Memoization Specialist (PMS)",
+      "responsibility": "Implement a 2-tier caching system (in-memory LRU + SQLite persistent table) ensuring <5ms execution on cached products and non-blocking background population."
+    },
+    {
+      "name": "Conversational Prompt & UX Specialist (CPS)",
+      "responsibility": "Design structured JSON prompts extracting companion roles (consumable, accessory, protective, synergy) and in-person store decision checklists."
+    },
+    {
+      "name": "Quality & Validation Lead (QAL)",
+      "responsibility": "Validate the algorithm across heterogeneous catalog categories (Electronics, Power Tools, Home Appliances, Photography, Musical Instruments) and ensure 100% test pass rate."
+    }
+  ],
+  "deliverables": [
+    "Algorithmic and Mathematical Specification Document",
+    "Dynamic AI Product Intelligence Module (backend/algorithms/ai_product_intelligence.py)",
+    "Database Migration for SQLite Memoization Cache",
+    "Seamless Integration into backend/assistant.py, backend/main.py, and prompt_generator.py",
+    "Automated Benchmark and Heterogeneous Category Tests",
+    "Live UI Verification in the Browser"
+  ]
+}

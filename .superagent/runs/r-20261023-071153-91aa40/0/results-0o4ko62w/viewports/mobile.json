@@ -1,0 +1,214 @@
+{
+  "level": "AA",
+  "targets": {
+    "checked": 80,
+    "minimum": [],
+    "touch": [
+      {
+        "target": "a.skip-link \"رفتن به محتوای اصلی\"",
+        "width": 142,
+        "height": 40
+      },
+      {
+        "target": "a.brand \"صفحه اصلی کَلَم\"",
+        "width": 120,
+        "height": 36
+      },
+      {
+        "target": "button#hub-btn",
+        "width": 144,
+        "height": 40
+      },
+      {
+        "target": "button#loc-btn",
+        "width": 38,
+        "height": 40
+      },
+      {
+        "target": "a.header-btn.cart-link \"سبد خرید حضوری\"",
+        "width": 38,
+        "height": 40
+      },
+      {
+        "target": "a \"گوشی موبایل\"",
+        "width": 91,
+        "height": 34
+      },
+      {
+        "target": "a \"لپ‌تاپ\"",
+        "width": 59,
+        "height": 34
+      },
+      {
+        "target": "a \"هدفون و هندزفری\"",
+        "width": 117,
+        "height": 34
+      },
+      {
+        "target": "a \"ماوس و کیبورد\"",
+        "width": 99,
+        "height": 34
+      },
+      {
+        "target": "a \"شارژر\"",
+        "width": 51,
+        "height": 34
+      },
+      {
+        "target": "a \"کیف و کاور\"",
+        "width": 79,
+        "height": 34
+      },
+      {
+        "target": "a \"ساعت هوشمند\"",
+        "width": 104,
+        "height": 34
+      },
+      {
+        "target": "a \"کفش و کتانی\"",
+        "width": 91,
+        "height": 34
+      },
+      {
+        "target": "a \"دوربین مداربسته\"",
+        "width": 110,
+        "height": 34
+      },
+      {
+        "target": "a \"سیم و کابل\"",
+        "width": 82,
+        "height": 34
+      },
+      {
+        "target": "a \"ابزار برقی\"",
+        "width": 68,
+        "height": 34
+      },
+      {
+        "target": "a \"پمپ آب\"",
+        "width": 65,
+        "height": 34
+      },
+      {
+        "target": "a \"موتور برق\"",
+        "width": 72,
+        "height": 34
+      },
+      {
+        "target": "a.chip \"ایرپاد\"",
+        "width": 50,
+        "height": 32
+      },
+      {
+        "target": "a.chip \"Galaxy A55\"",
+        "width": 86,
+        "height": 32
+      },
+      {
+        "target": "a.chip \"لپ تاپ ایسوس\"",
+        "width": 101,
+        "height": 32
+      },
+      {
+        "target": "a.chip \"ماوس لاجیتک\"",
+        "width": 93,
+        "height": 32
+      },
+      {
+        "target": "a.chip \"کتونی رانینگ\"",
+        "width": 85,
+        "height": 32
+      },
+      {
+        "target": "a.chip \"دریل شارژی\"",
+        "width": 80,
+        "height": 32
+      },
+      {
+        "target": "button.compare-toggle \"+ مقایسه\"",
+        "width": 64,
+        "height": 25
+      },
+      {
+        "target": "button.compare-toggle \"+ مقایسه\"",
+        "width": 64,
+        "height": 25
+      },
+      {
+        "target": "button.compare-toggle \"+ مقایسه\"",
+        "width": 64,
+        "height": 25
+      },
+      {
+        "target": "button.compare-toggle \"+ مقایسه\"",
+        "width": 64,
+        "height": 25
+      },
+      {
+        "target": "button.compare-toggle \"+ مقایسه\"",
+        "width": 64,
+        "height": 25
+      },
+      {
+        "target": "button.compare-toggle \"+ مقایسه\"",
+        "width": 64,
+        "height": 25
+      },
+      {
+        "target": "button.compare-toggle \"+ مقایسه\"",
+        "width": 64,
+        "height": 25
+      },
+      {
+        "target": "button.compare-toggle \"+ مقایسه\"",
+        "width": 64,
+        "height": 25
+      },
+      {
+        "target": "button.compare-toggle \"+ مقایسه\"",
+        "width": 64,
+        "height": 25
+      },
+      {
+        "target": "button.compare-toggle \"+ مقایسه\"",
+        "width": 64,
+        "height": 25
+      },
+      {
+        "target": "button.compare-toggle \"+ مقایسه\"",
+        "width": 64,
+        "height": 25
+      },
+      {
+        "target": "button.compare-toggle \"+ مقایسه\"",
+        "width": 64,
+        "height": 25
+      },
+      {
+        "target": "a \"درباره کَلَم و الگوریتم‌ها\"",
+        "width": 115,
+        "height": 20
+      },
+      {
+        "target": "a \"وایت‌پیپر (PDF)\"",
+        "width": 81,
+        "height": 20
+      },
+      {
+        "target": "a \"سبد خرید حضوری\"",
+        "width": 93,
+        "height": 20
+      }
+    ]
+  },
+  "keyboard": {
+    "reached": 0,
+    "unreachable": [],
+    "focusNotVisible": [],
+    "obscured": [],
+    "trap": null,
+    "positiveTabindex": [],
+    "notFocusable": []
+  },
+  "pageErrors": []
+}

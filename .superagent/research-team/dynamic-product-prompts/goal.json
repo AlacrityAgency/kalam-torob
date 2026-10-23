@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "dynamic-product-prompts-and-compatibility",
+  "revision": 1,
+  "objective": "Design, formalize, implement, and benchmark the Dynamic Contextual Prompt Generator (DCPG) and resolve the Category Generalization & Model-Compatibility anomaly in PACO for in-person shopping",
+  "audience": "Torob Physical Shopping Assistant Core Engineers, Product Leads, and Tehran Retail Shoppers",
+  "questions": [
+    "Q1: Category Generalization Anomaly - Why did PACO recommend 6,000-toman coin battery holders from Amjad mall for a 20-million Samsung A54 smartphone?",
+    "Q2: Dynamic Contextual Prompt Generation (DCPG) Formulation - How to mathematically and semantically derive ready-made chat prompts from product specifications, brand, model tokens, shop location, and active cart context?",
+    "Q3: Cross-Category Token Filtering & Model Alignment Metric - How to prevent accessory category pollution (e.g. industrial 9V clips leaking into smartphone chargers)?",
+    "Q4: In-Mall Buyer Psychology & Actionable Prompts - What question patterns maximize buyer conversion, discount bargaining leverage, and floor wayfinding?",
+    "Q5: End-to-End Real-Time Latency & Browser Verification - How to guarantee <50ms local prompt generation and verify live browser interaction?"
+  ],
+  "scope": "Tehran Torob offline dataset (6,476 shops, physical malls, electronics, mobile, tools, lighting) and Kalam conversational assistant",
+  "constraints": [
+    "Zero hallucination: every prompt must correspond to feasible database queries and actual physical mall realities",
+    "Sub-50ms local generation time for prompt chips",
+    "Strict model-affinity for branded products (e.g. Galaxy A54 must only suggest A54-compatible cases and 25W chargers)",
+    "Preserve backward compatibility with all existing 74 unit tests"
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "description": "Formal mathematical and heuristic formulation of DCPG (Dynamic Contextual Prompt Generator)",
+      "mandatory": true
+    },
+    {
+      "id": "A2",
+      "description": "Elimination of the coin-battery holder anomaly in PACO complementary recommendations for Samsung A54",
+      "mandatory": true
+    },
+    {
+      "id": "A3",
+      "description": "Production Python module backend/algorithms/prompt_generator.py with comprehensive test coverage",
+      "mandatory": true
+    },
+    {
+      "id": "A4",
+      "description": "Dynamic frontend integration in public/app.js updating prompt chips on product navigation and cart changes",
+      "mandatory": true
+    },
+    {
+      "id": "A5",
+      "description": "Live browser visual validation showing context-aware prompts and genuine A54 accessories",
+      "mandatory": true
+    }
+  ]
+}

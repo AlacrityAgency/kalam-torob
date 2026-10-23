@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "behavioral-and-sales-algorithm-redesign",
+  "revision": 1,
+  "objective": "Deep multidisciplinary evaluation, critique, and redesign of Kalam in-person purchase assistance and companion recommendation algorithms using Behavioral Psychology, Sales/Marketing dynamics, and LLM reasoning.",
+  "audience": "Product Leads, Algorithm Engineers, Torob Executives, Hackathon Judges",
+  "teams": [
+    {
+      "name": "Psychology Research, Analysis & Decision-Making Team",
+      "members": [
+        "Dr. Cognitive Psychologist & Choice Architect (Cognitive Load, Paradox of Choice, Choice Architecture)",
+        "Behavioral Economics & Risk Perception Specialist (Prospect Theory, Loss Aversion, Mental Accounting, Anchoring)",
+        "In-Person Shopping Anxiety & Algorithmic Trust Analyst (Social friction, vendor intimidation, buyer remorse, trust calibration)"
+      ]
+    },
+    {
+      "name": "Sales & Marketing Research, Analysis & Decision-Making Team",
+      "members": [
+        "Chief Bazaar Commercial Strategist (Tehran commercial hub dynamics: Chaharsoo, Alaeddin, Hasan Abad, Lalehzar, Shoush; margin economics)",
+        "Retail Basket Optimization & Companion Economics Lead (AOV, attach rates, walk friction vs bundle discount, same-store vs cross-store)",
+        "Negotiation Dynamics & In-Store Conversion Specialist (Traditional Iranian bazaar bargaining, Ta'arof breakdown, in-store conversational leverage)"
+      ]
+    }
+  ],
+  "questions": [
+    "Q1: How do existing algorithms (PACO, recommend.py, DCA, prompt_generator) fail or succeed from consumer psychology and behavioral economics perspectives?",
+    "Q2: How do existing algorithms align with or contradict retail store unit economics, merchant margins, and Iranian bazaar shopping realities?",
+    "Q3: What are the points of tension and synthesis between psychological reassurance (reducing choice/anxiety) and commercial basket maximization (upsell/cross-sell)?",
+    "Q4: How does the availability of high-speed LLM reasoning (e.g. Arvan AlaaS, OpenAI, Z-AI) fundamentally alter the design of real-time buyer assistance?",
+    "Q5: What is the formal specification and mathematical architecture of the newly designed BAP-LLM (Behavioral & Analytical Purchasing with LLM) algorithm?"
+  ],
+  "scope": "Kalam in-person shopping assistant algorithms, dynamic prompts, companion engine, basket optimization, and LLM reasoning layer",
+  "constraints": [
+    "Rigorously grounded in peer-reviewed psychological and economic literature (Kahneman, Tversky, Thaler, Schwartz, Sweller, Cialdini)",
+    "Empirically faithful to Tehran offline bazaar practices and retail sales funnels",
+    "Actionable algorithmic formulas, architecture diagrams, and prompt designs",
+    "Persian cultural and conversational nuances (Ta'arof, bazaar negotiation, in-store validation)"
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "description": "Establishment of comprehensive team charters with theoretical frameworks and analytical lenses",
+      "mandatory": true
+    },
+    {
+      "id": "A2",
+      "description": "Exhaustive dialogue and debate transcript capturing the multidisciplinary discourse and cross-critique",
+      "mandatory": true
+    },
+    {
+      "id": "A3",
+      "description": "Detailed comparative critique matrix of existing algorithms vs behavioral and sales benchmarks",
+      "mandatory": true
+    },
+    {
+      "id": "A4",
+      "description": "Complete architectural and mathematical formulation of the new BAP-LLM algorithm integrating LLM intent/framing",
+      "mandatory": true
+    },
+    {
+      "id": "A5",
+      "description": "Dynamic prompt and negotiation ammunition matrix tailored for in-store buyer enablement",
+      "mandatory": true
+    }
+  ],
+  "budget": {
+    "max_attempts": 10,
+    "max_active": 3,
+    "max_seconds": 3600
+  }
+}

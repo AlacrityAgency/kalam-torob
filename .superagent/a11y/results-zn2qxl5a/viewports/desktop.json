@@ -1,0 +1,174 @@
+{
+  "target": "http://127.0.0.1:8000/",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "violations": [
+    {
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+      "nodes": [
+        {
+          "target": ".hub-card[data-hub=\"فردوسی\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"شیخ هادی\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"بهارستان\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"آسمان\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"ایرانشهر\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"سنائی\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"باغ فیض\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"جنت آباد جنوبی\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"آذربایجان\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"تجریش\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"سهروردی\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"امجدیه\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"آشتیانی\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"کیانشهر شمالی\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"بهار\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"درختی\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"فلسطین\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"مطهری\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"مهران\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"ولیعصر\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"سازمان برنامه شمالی\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"امام زاده قاسم\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"تهران پارس\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"باغ فردوس\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"دزاشیب\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".hub-card[data-hub=\"عباس آباد\"][data-action=\"set-hub\"] > span:nth-child(2) > small",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".product-card-wrap:nth-child(1) > .product-card > .product-shops",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".product-card-wrap:nth-child(2) > .product-card > .product-shops",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".product-card-wrap:nth-child(3) > .product-card > .product-shops",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".product-card-wrap:nth-child(4) > .product-card > .product-shops",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".product-card-wrap:nth-child(5) > .product-card > .product-shops",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".product-card-wrap:nth-child(6) > .product-card > .product-shops",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".product-card-wrap:nth-child(7) > .product-card > .product-shops",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".product-card-wrap:nth-child(8) > .product-card > .product-shops",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".product-card-wrap:nth-child(9) > .product-card > .product-shops",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".product-card-wrap:nth-child(10) > .product-card > .product-shops",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".product-card-wrap:nth-child(11) > .product-card > .product-shops",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".product-card-wrap:nth-child(12) > .product-card > .product-shops",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "target": ".footer-note",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.64 (foreground color: #9aa0a6, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1"
+        }
+      ]
+    }
+  ],
+  "pageErrors": []
+}

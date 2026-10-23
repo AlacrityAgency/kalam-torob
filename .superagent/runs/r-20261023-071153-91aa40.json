@@ -1,0 +1,101 @@
+{
+  "gate": "ui-ux.interaction",
+  "status": "FAIL",
+  "exit_code": 1,
+  "target": "http://127.0.0.1:8000/",
+  "metrics": {
+    "expected": 2,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "viewports": "desktop, mobile"
+  },
+  "findings": [
+    {
+      "id": "interaction-0001",
+      "module": "ui-ux",
+      "rule": "keyboard-unreachable",
+      "severity": "P1",
+      "confidence": "verified",
+      "condition": "desktop viewport (SC 2.1.1)",
+      "evidence": {
+        "elements": [
+          "a \"رفتن به محتوای اصلی\"",
+          "a \"صفحه اصلی کَلَم\"",
+          "button \"همه محدوده‌ها\"",
+          "button \"موقعیت من\"",
+          "a \"سبد خرید حضوری\"",
+          "a \"گوشی موبایل\"",
+          "a \"لپ‌تاپ\"",
+          "a \"هدفون و هندزفری\"",
+          "a \"ماوس و کیبورد\"",
+          "a \"شارژر\"",
+          "a \"کیف و کاور\"",
+          "a \"ساعت هوشمند\"",
+          "a \"کفش و کتانی\"",
+          "a \"دوربین مداربسته\"",
+          "a \"سیم و کابل\""
+        ],
+        "count": 19
+      },
+      "impact": "Controls that cannot be reached with Tab are unusable without a mouse.",
+      "remediation": "Use native elements or give custom widgets tabindex=0 and key handlers."
+    },
+    {
+      "id": "interaction-0002",
+      "module": "ui-ux",
+      "rule": "touch-target-below-44",
+      "severity": "P2",
+      "confidence": "suspected",
+      "condition": "mobile viewport (WCAG 2.2 SC 2.5.5, 44x44 px)",
+      "evidence": {
+        "elements": [
+          "a.skip-link \"رفتن به محتوای اصلی\" 142x40px",
+          "a.brand \"صفحه اصلی کَلَم\" 120x36px",
+          "button#hub-btn 144x40px",
+          "button#loc-btn 38x40px",
+          "a.header-btn.cart-link \"سبد خرید حضوری\" 38x40px",
+          "a \"گوشی موبایل\" 91x34px",
+          "a \"لپ‌تاپ\" 59x34px",
+          "a \"هدفون و هندزفری\" 117x34px",
+          "a \"ماوس و کیبورد\" 99x34px",
+          "a \"شارژر\" 51x34px",
+          "a \"کیف و کاور\" 79x34px",
+          "a \"ساعت هوشمند\" 104x34px",
+          "a \"کفش و کتانی\" 91x34px",
+          "a \"دوربین مداربسته\" 110x34px",
+          "a \"سیم و کابل\" 82x34px"
+        ],
+        "count": 39
+      },
+      "impact": "Touch targets under 44x44 px are hard to hit on phones.",
+      "remediation": "Use 44 px (h-11 / min-h-[44px]) for primary touch actions."
+    }
+  ],
+  "notes": [],
+  "artifacts": {
+    "results": "/Users/dazzle/torob/.superagent/runs/r-20261023-071153-91aa40/0/results-0o4ko62w"
+  },
+  "provenance": {
+    "python": "3.13.5",
+    "platform": "Darwin",
+    "skill_version": "6.0.0",
+    "command": [
+      "/opt/anaconda3/bin/python3",
+      "/Users/dazzle/Desktop/cv/.antigravity/skills/super/modules/ui-ux/gates/interaction.py",
+      "--project",
+      "/Users/dazzle/torob",
+      "--json",
+      "--url",
+      "http://127.0.0.1:8000/"
+    ],
+    "scope": null,
+    "fingerprint_before": "22b5a001c43e625d",
+    "fingerprint_after": "22b5a001c43e625d"
+  },
+  "timing": {
+    "execution_s": 7.3366,
+    "fingerprint_before_s": 0.0219,
+    "fingerprint_after_s": 0.0283
+  }
+}
