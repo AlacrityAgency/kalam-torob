@@ -101,9 +101,12 @@
           <strong>دستیار کَلَم</strong>
           <span id="assistant-context" class="assistant-context-pill" hidden></span>
         </div>
-        <span>پاسخ‌ها مستقیماً بر مبنای داده‌های خرید حضوری ترب</span>
+        <span>مشاور و ایجنت خرید حضوری، بر مبنای داده‌های ترب</span>
       </div>
       <div class="assistant-actions">
+        <button type="button" class="icon-btn dock-btn" id="dock-btn" data-action="toggle-dock" title="ثابت کنار صفحه" aria-label="ثابت کردن دستیار کنار صفحه" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>
+        </button>
         <button type="button" class="icon-btn" data-action="clear-chat" title="پاک کردن گفتگو" aria-label="پاک کردن گفتگو">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
         </button>
@@ -114,7 +117,7 @@
     </div>
     <div class="assistant-body" id="chat-messages" aria-live="polite"></div>
     <form class="assistant-input" id="chat-form">
-      <input type="text" id="chat-input" placeholder="مثلاً: آیفون ۱۶ قسطی در چارسو یا دریل رونیکس..." autocomplete="off" aria-label="پیام به دستیار هوشمند کلم">
+      <input type="text" id="chat-input" placeholder="بپرسید یا کار بسپارید: «A55 قسطی نزدیک من پیدا کن و هماهنگ کن»" autocomplete="off" aria-label="پیام به دستیار هوشمند کلم">
       <button type="submit" class="btn btn-primary" aria-label="ارسال پیام">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12 4 4l3 8-3 8 16-8ZM7 12h6"/></svg>
       </button>

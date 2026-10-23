@@ -4,7 +4,7 @@
  * - درخواست‌های GET به API اول از شبکه و در صورت قطعی از آخرین پاسخ کش‌شده خوانده می‌شوند،
  *   پس صفحه کالا یا مسیری که قبلاً دیده شده، بدون اینترنت هم باز می‌شود.
  */
-const VERSION = "kalam-v3";
+const VERSION = "kalam-v4";
 const SHELL = ["/", "/index.html", "/app.css", "/app.js", "/logo.jpg", "/fonts/Vazirmatn-Variable.woff2", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {

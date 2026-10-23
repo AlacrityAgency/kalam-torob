@@ -10,6 +10,12 @@ const LS_HUB = "kalam_hub";
 const LS_ROUTE = "kalam_route_cache";
 const LS_LOC = "kalam_location";
 const LS_COMPARE = "kalam_compare";
+const LS_DOCK = "kalam_assistant_docked";
+const DOCK_QUERY = "(min-width: 1100px)";
+const AGENT_STARTERS = [
+  "یه گوشی A55 قسطی نزدیک من پیدا کن و هماهنگ کن",
+  "ارزون‌ترین ایرپاد که الان باز باشه رو پیدا کن و هماهنگ کن",
+];
 const MAX_COMPARE = 4;
 
 const CATEGORY_LINKS = [
@@ -175,6 +181,128 @@ function mapLink(lat, lon) {
   return `<a class="btn-link" href="${esc(url)}" target="_blank" rel="noopener">${small(ICONS.pin)} مسیریابی در نقشه</a>`;
 }
 
+/* ---------- نقشه: Leaflet داخل پروژه، فقط وقتی لازم است بارگذاری می‌شود ---------- */
+const TEHRAN_CENTER = [35.6995, 51.3907];
+let leafletPromise = null;
+
+function loadLeaflet() {
+  if (window.L) return Promise.resolve(window.L);
+  if (!leafletPromise) {
+    leafletPromise = new Promise((resolve, reject) => {
+      const css = document.createElement("link");
+      css.rel = "stylesheet";
+      css.href = "/vendor/leaflet/leaflet.css";
+      document.head.appendChild(css);
+      const js = document.createElement("script");
+      js.src = "/vendor/leaflet/leaflet.js";
+      js.onload = () => resolve(window.L);
+      js.onerror = () => { leafletPromise = null; reject(new Error("leaflet")); };
+      document.head.appendChild(js);
+    });
+  }
+  return leafletPromise;
+}
+
+function hasCoord(lat, lon) {
+  return lat !== null && lat !== undefined && lon !== null && lon !== undefined
+    && Number.isFinite(Number(lat)) && Number.isFinite(Number(lon)) && Math.abs(Number(lat)) > 1;
+}
+
+/**
+ * رسم نقشه در el.
+ * points: [{lat, lon, kind: best|open|closed|unknown|hub|stop, num, title, html}]
+ * نقاط هم‌مکان (مغازه‌های یک پاساژ) یک نشانگر با شمارنده می‌شوند و پاپ‌آپ همه را فهرست می‌کند.
+ * route: نقاط به ترتیب با خط به هم وصل می‌شوند (مسیر سبد / ایجنت).
+ */
+async function drawMap(el, { points = [], user = null, route = false, onAction = null } = {}) {
+  if (!el) return null;
+  let L;
+  try {
+    L = await loadLeaflet();
+  } catch (e) {
+    el.innerHTML = `<div class="map-fallback">نقشه بارگذاری نشد.</div>`;
+    return null;
+  }
+  if (!el.isConnected) return null;
+  if (el._kalamMap) el._kalamMap.remove();
+  el.classList.add("kalam-map");
+  const map = L.map(el, { zoomControl: true, attributionControl: true, scrollWheelZoom: false });
+  el._kalamMap = map;
+  const tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+  }).addTo(map);
+  // بدون اینترنت (طبقات منفی پاساژ) نقشه پایه نمی‌آید ولی نشانگرها و مسیر نسبی دیده می‌شوند
+  let tileErrors = 0;
+  tiles.on("tileerror", () => {
+    tileErrors += 1;
+    if (tileErrors === 3) el.classList.add("map-offline");
+  });
+  tiles.on("tileload", () => el.classList.remove("map-offline"));
+
+  const groups = new Map();
+  points.filter((pt) => hasCoord(pt.lat, pt.lon)).forEach((pt) => {
+    const key = `${Number(pt.lat).toFixed(4)},${Number(pt.lon).toFixed(4)}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(pt);
+  });
+  const rank = { best: 0, stop: 1, open: 2, hub: 3, unknown: 4, closed: 5 };
+  const bounds = [];
+  groups.forEach((pts) => {
+    pts.sort((a, b) => (rank[a.kind] ?? 9) - (rank[b.kind] ?? 9));
+    const top = pts[0];
+    const label = top.num !== undefined && top.num !== null ? faNum(top.num) : (pts.length > 1 ? faNum(pts.length) : "");
+    const icon = L.divIcon({
+      className: "",
+      html: `<span class="map-pin pin-${esc(top.kind || "unknown")}">${label ? `<b>${label}</b>` : ""}</span>`,
+      iconSize: [30, 30],
+      iconAnchor: [15, 30],
+      popupAnchor: [0, -28],
+    });
+    const ll = [Number(top.lat), Number(top.lon)];
+    const marker = L.marker(ll, { icon, title: top.title || "", riseOnHover: true, zIndexOffset: top.kind === "best" ? 1000 : 0 }).addTo(map);
+    marker.bindPopup(`<div class="map-popup">${pts.map((pt) => pt.html || esc(pt.title || "")).join('<hr>')}</div>`, { maxWidth: 260 });
+    bounds.push(ll);
+  });
+
+  if (user && hasCoord(user.lat, user.lon)) {
+    const ll = [Number(user.lat), Number(user.lon)];
+    L.marker(ll, {
+      icon: L.divIcon({ className: "", html: '<span class="map-user" title="موقعیت شما"></span>', iconSize: [18, 18], iconAnchor: [9, 9] }),
+      zIndexOffset: 500,
+      title: "موقعیت شما",
+    }).addTo(map).bindPopup('<div class="map-popup"><strong>موقعیت شما</strong></div>');
+    bounds.push(ll);
+  }
+
+  if (route) {
+    const path = [];
+    if (user && hasCoord(user.lat, user.lon)) path.push([Number(user.lat), Number(user.lon)]);
+    points.filter((pt) => hasCoord(pt.lat, pt.lon)).forEach((pt) => path.push([Number(pt.lat), Number(pt.lon)]));
+    if (path.length > 1) L.polyline(path, { color: "#d73948", weight: 4, opacity: 0.8, dashArray: "8 8" }).addTo(map);
+  }
+
+  if (bounds.length > 1) map.fitBounds(bounds, { padding: [36, 36], maxZoom: 16 });
+  else if (bounds.length === 1) map.setView(bounds[0], 15);
+  else map.setView(TEHRAN_CENTER, 12);
+
+  // دکمه‌های داخل پاپ‌آپ؛ Leaflet کلیک داخل پاپ‌آپ را به document نمی‌رساند
+  if (onAction) {
+    map.on("popupopen", (e) => {
+      e.popup.getElement().querySelectorAll("[data-action]").forEach((btn) => {
+        btn.addEventListener("click", (ev) => { map.closePopup(); onAction(ev); }, { once: true });
+      });
+    });
+  }
+  // اندازه ظرف ممکن است بعد از رندر تغییر کند (پنل جمع‌شونده، چرخش موبایل)
+  setTimeout(() => map.invalidateSize(), 200);
+  return map;
+}
+
+function mapPinKind(hoursState) {
+  return { open: "open", closed: "closed" }[hoursState] || "unknown";
+}
+
 function hoursHtml(h) {
   if (!h) return "";
   const cls = { open: "dot-high", closed: "dot-low" }[h.state] || "dot-medium";
@@ -290,6 +418,7 @@ class KalamApp {
     });
 
     document.getElementById("assistant-fab").addEventListener("click", () => this.toggleAssistant());
+    window.matchMedia(DOCK_QUERY).addEventListener("change", () => this.applyDock());
     document.getElementById("chat-form").addEventListener("submit", (e) => {
       e.preventDefault();
       const input = document.getElementById("chat-input");
@@ -316,7 +445,7 @@ class KalamApp {
     }, true);
 
     // همه دکمه‌های داینامیک با data-action مدیریت می‌شوند (بدون onclick داخل HTML)
-    document.addEventListener("click", (e) => {
+    this.onDocClick = (e) => {
       const el = e.target.closest("[data-action]");
       if (!el) return;
       const d = el.dataset;
@@ -339,9 +468,13 @@ class KalamApp {
         case "wayfinding": this.showWayfinding(d.shop); break;
         case "dossier": this.showDossier(d.shop, d.product, Number(d.price || 0), d.offer); break;
         case "panic": this.showPanic(d.product, d.shop, d.shopName); break;
-        case "copy": this.copyText(d.target); break;
+        case "copy": this.copyFrom(d.target); break;
         case "save-route": this.saveRouteOffline(); break;
         case "chat-prompt": this.sendChat(d.text); break;
+        case "toggle-dock": this.setDocked(!this.docked); break;
+        case "run-mission": this.sendChat(d.text || "برای همین کالا هماهنگ کن"); break;
+        case "mission-product": this.missionForProduct(d.id); break;
+        case "copy-text": this.copyText(d.text); break;
         case "go": this.closeModal(); this.go(d.href); break;
         case "open-location": this.showLocationModal(); break;
         case "loc-gps": this.useGps(); break;
@@ -353,7 +486,8 @@ class KalamApp {
         case "remove-compare": this.toggleCompare(d.id); this.renderCompare(); break;
         case "follow-up": this.runFollowUp(d.offer, d.product, d.shop, d.shopName); break;
       }
-    });
+    };
+    document.addEventListener("click", this.onDocClick);
   }
 
   go(path) {
@@ -369,6 +503,8 @@ class KalamApp {
     const params = new URLSearchParams(query);
     document.body.classList.toggle("is-home", path === "/");
     this.closeModal();
+    // در موبایل دستیار برگه تمام‌صفحه است؛ با رفتن به صفحه دیگر (مثلاً «صفحه کالا» از نتیجه ایجنت) کنار می‌رود
+    if (window.matchMedia("(max-width: 720px)").matches && !document.getElementById("assistant").hidden) this.toggleAssistant(false);
     window.scrollTo(0, 0);
 
     const headerInput = document.getElementById("header-search-input");
@@ -640,6 +776,7 @@ class KalamApp {
       <section class="container">
         <div class="section-title"><h2>مراکز خرید</h2></div>
         <div class="hub-grid" id="home-hubs">${'<div class="hub-card skeleton" style="height:70px"></div>'.repeat(4)}</div>
+        <div class="map-box map-hubs" id="hubs-map" role="region" aria-label="نقشه مراکز خرید"></div>
 
         <div class="section-title"><h2>پرفروشنده‌ترین کالاها در بازار حضوری</h2></div>
         <div class="product-grid cols-6" id="home-products">${this.skeletonCards(6)}</div>
@@ -675,6 +812,18 @@ class KalamApp {
   renderHomeHubs() {
     const el = document.getElementById("home-hubs");
     if (!el || !this.hubs.length) return;
+    const mapEl = document.getElementById("hubs-map");
+    if (mapEl && !mapEl._kalamMap) {
+      drawMap(mapEl, {
+        user: this.loc,
+        onAction: this.onDocClick,
+        points: this.hubs.map((h) => ({
+          lat: h.lat, lon: h.lon, kind: "hub", num: h.shop_count, title: h.name,
+          html: `<strong>${esc(h.name)}</strong><div class="faint">${faNum(h.shop_count)} فروشگاه حضوری</div>
+            <div class="map-popup-actions"><button type="button" class="btn btn-primary btn-sm" data-action="set-hub" data-hub="${esc(h.name)}">خرید در این محدوده</button></div>`,
+        })),
+      });
+    }
     el.innerHTML = this.hubs.map((h) => `
       <button type="button" class="hub-card" data-action="set-hub" data-hub="${esc(h.name)}">
         <span class="hub-icon">${ICONS.store}</span>
@@ -859,6 +1008,9 @@ class KalamApp {
 
   async renderProduct(id) {
     this.activeProductId = id;
+    // مغازه فعال کالای قبلی نباید به سؤال «همین مغازه» درباره این کالا نشت کند
+    this.activeShopId = null;
+    this.contextPrompts = null;
     const seq = this.renderSeq;
     this.setView(`<div class="container"><div style="height:16px"></div><div class="panel product-hero"><div class="product-thumb skeleton"></div><div><div class="skeleton" style="height:18px;margin-bottom:12px"></div><div class="skeleton" style="height:18px;width:60%"></div></div></div></div>`);
     let data, comp;
@@ -919,6 +1071,7 @@ class KalamApp {
               ${inCart
                 ? `<a class="btn btn-outline" href="#/cart">${ICONS.cart} در سبد حضوری است؛ مشاهده مسیر</a>`
                 : `<button type="button" class="btn btn-primary" data-action="add-cart" data-id="${esc(id)}">${ICONS.cart} افزودن به سبد خرید حضوری</button>`}
+              <button type="button" class="btn btn-ghost btn-agent" data-action="run-mission" data-text="برای همین کالا هماهنگ کن">🤖 ایجنت: برام هماهنگ کن</button>
               <a class="btn btn-ghost" href="#sellers">مقایسه فروشگاه‌ها</a>
               <button type="button" class="btn btn-ghost compare-toggle-hero ${this.compare.includes(String(id)) ? "active" : ""}" data-action="toggle-compare" data-id="${esc(id)}">${this.compare.includes(String(id)) ? "✓ در فهرست مقایسه" : "+ مقایسه با کالای دیگر"}</button>
             </div>
@@ -931,6 +1084,7 @@ class KalamApp {
             <span class="faint" style="font-size:12px" id="seller-count"></span>
           </div>
           ${this.recommendationHtml(data.recommendation, offers, p)}
+          <div class="map-box" id="seller-map" role="region" aria-label="نقشه فروشگاه‌های این کالا"></div>
           <div class="seller-filters" id="seller-filters"></div>
           <div class="seller-sort" id="seller-sort"></div>
           <div id="seller-list"></div>
@@ -980,10 +1134,11 @@ class KalamApp {
         </section>` : ""}
       </div>`, p.title);
     this.renderSellers();
+    this.renderSellerMap(data.recommendation);
     getJSON(`/api/prompts?product_id=${encodeURIComponent(id)}${this.hub ? `&hub=${encodeURIComponent(this.hub)}` : ""}`)
       .then((res) => {
         if (res && res.prompts && res.prompts.length) {
-          this.renderChatPrompts(res.prompts);
+          if (this.activeProductId === id) this.renderChatPrompts(res.prompts);
         }
       })
       .catch(() => {});
@@ -1006,6 +1161,29 @@ class KalamApp {
       if (d === null || d === undefined || d > 14) return false;
     }
     return true;
+  }
+
+  renderSellerMap(rec) {
+    const offers = (this.currentOffers || []).filter((o) => o.price_toman && !o.is_copy && !o.price_suspect);
+    const bestId = rec && rec.offer_id;
+    const points = offers.map((o) => {
+      const s = o.shop;
+      const kind = o.offer_id === bestId ? "best" : mapPinKind(s.hours && s.hours.state);
+      return {
+        lat: s.lat, lon: s.lon, kind, title: s.name,
+        html: `<strong>${esc(s.name)}</strong>${o.offer_id === bestId ? ' <span class="tag tag-primary">پیشنهاد کلم</span>' : ""}
+          <div>${faNum(o.price_toman)} تومان</div>
+          <div class="faint">${esc((s.parsed_address && s.parsed_address.mall_name) || s.location_label || "")}${s.parsed_address && s.parsed_address.floor_known ? `، ${esc(s.parsed_address.floor_label)}` : ""}</div>
+          <div class="faint">${esc((s.hours && s.hours.label) || "")}${o.distance_km !== null && o.distance_km !== undefined ? ` · ${kmText(o.distance_km)} از شما` : ""}</div>
+          <div class="map-popup-actions">
+            <button type="button" class="btn btn-primary btn-sm" data-action="wayfinding" data-shop="${esc(s.shop_id)}">مسیر داخل پاساژ</button>
+            ${mapLink(s.lat, s.lon)}
+          </div>`,
+      };
+    });
+    const el = document.getElementById("seller-map");
+    if (!points.some((pt) => hasCoord(pt.lat, pt.lon))) { if (el) el.hidden = true; return; }
+    drawMap(el, { points, user: this.loc, onAction: this.onDocClick });
   }
 
   renderSellers() {
@@ -1206,63 +1384,6 @@ class KalamApp {
       ${phone ? `<p class="faint" style="font-size:12px;margin:10px 0 0">شماره‌های تماس در دیتاست آزمایشی ترب ساختگی‌اند و ممکن است به فروشگاه واقعی وصل نشوند.</p>` : ""}`;
   }
 
-  async runFollowUp(offerId, productId, shopId, shopName) {
-    this.activeShopId = shopId;
-    this.activeProductId = productId || this.activeProductId;
-    this.openModal(`پیگیری با ${shopName || "فروشنده"}`, `<div class="skeleton" style="height:160px"></div>`);
-    let r;
-    try {
-      r = await postJSON("/api/agent/follow-up", { offer_id: offerId });
-    } catch (e) {
-      document.getElementById("modal-body").innerHTML = this.errorHtml();
-      return;
-    }
-    const body = document.getElementById("modal-body");
-    const icon = { ok: "✓", warn: "!", bad: "✕" };
-    body.innerHTML = `
-      <p class="sandbox-note" style="margin-top:0">ایجنت کَلَم مراحل پیگیری را به ترتیب انجام می‌دهد. <span class="tag tag-amber">شبیه‌سازی</span> شماره‌های دیتاست ساختگی‌اند و پاسخ‌ها از داده‌های ثبت‌شده همین آفر ساخته می‌شوند.</p>
-      <ol class="followup-steps" id="followup-steps"></ol>
-      <div id="followup-decision"></div>`;
-    const list = document.getElementById("followup-steps");
-    // نمایش مرحله‌به‌مرحله تا کاربر روند پیگیری را ببیند
-    for (const st of r.steps) {
-      if (!document.getElementById("followup-steps")) return;
-      list.insertAdjacentHTML("beforeend", `
-        <li><span class="st ${st.status}">${icon[st.status] || "•"}</span>
-          <div><strong>${esc(st.label)}</strong>${st.question ? `<div class="faint">ایجنت: ${esc(st.question)}</div>` : ""}<div>${esc(st.text)}</div></div>
-        </li>`);
-      await new Promise((res) => setTimeout(res, 350));
-    }
-    const d = r.decision;
-    const cls = { go: "tag-green", call_first: "tag-amber", alternative: "tag-red" }[d.action] || "tag-gray";
-    const decision = document.getElementById("followup-decision");
-    if (!decision) return;
-    decision.innerHTML = `
-      <div class="visit-plan">
-        <strong><span class="tag ${cls}">${esc(d.label)}</span></strong>
-        <div>${esc(d.text)}</div>
-      </div>
-      ${(r.alternatives || []).map((f) => `
-        <div class="fallback-row">
-          <div style="min-width:0">
-            <div class="seller-name">${esc(f.name)} <span class="tag tag-gray">${esc(f.tier_badge)}</span></div>
-            <div class="seller-loc">${locationLine(f.parsed_address)}</div>
-            <div class="seller-sub">${hoursHtml(f.hours)}</div>
-          </div>
-          <div class="seller-side">
-            <div class="seller-price">${faNum(f.price_toman)} <small>تومان</small></div>
-            <button type="button" class="btn btn-outline btn-sm" data-action="wayfinding" data-shop="${esc(f.shop_id)}">${ICONS.route} مسیر</button>
-          </div>
-        </div>`).join("")}
-      <div class="field-label" style="margin-top:14px">راه‌های ارتباط</div>
-      <div class="hero-actions" style="margin-top:6px">
-        ${(r.contact_channels || []).map((c) => `<a class="btn ${c.real ? "btn-primary" : "btn-ghost"} btn-sm" href="${esc(c.url)}" ${c.type === "phone" ? "" : 'target="_blank" rel="noopener nofollow"'} title="${esc(c.note || "")}">${esc(c.label)}</a>`).join("") || '<span class="faint">راه ارتباطی ثبت نشده</span>'}
-        <button type="button" class="btn btn-ghost btn-sm" data-action="copy" data-target="followup-draft">${ICONS.copy} کپی پیام رزرو</button>
-      </div>
-      <div id="followup-draft" hidden>${esc(r.chat_draft_text)}</div>
-      ${(r.contact_channels || []).some((c) => !c.real) ? '<p class="faint" style="font-size:11px;margin:8px 0 0">شماره تلفن در دیتاست آزمایشی ترب ساختگی است.</p>' : ""}`;
-  }
-
   async runSimulation(offerId, question) {
     const log = document.getElementById("sandbox-log");
     if (!log) return;
@@ -1307,15 +1428,9 @@ class KalamApp {
     }
   }
 
-  async copyText(targetId) {
+  copyFrom(targetId) {
     const el = document.getElementById(targetId);
-    if (!el) return;
-    try {
-      await navigator.clipboard.writeText(el.textContent);
-      this.toast("متن کپی شد.", "success");
-    } catch (e) {
-      this.toast("کپی انجام نشد؛ متن را دستی انتخاب کنید.", "error");
-    }
+    if (el) this.copyText(el.textContent);
   }
 
   /* ---------- Cart & route ---------- */
@@ -1337,7 +1452,7 @@ class KalamApp {
     this.cart.push({ id, title: info.title, price: info.price, image: info.image, category: info.category || "" });
     this.saveCart();
     this.toast("به سبد خرید حضوری اضافه شد.", "success");
-    document.querySelectorAll(`.msg-card-btn[data-id="${id}"]`).forEach((b) => {
+    document.querySelectorAll(`.msg-card-btn[data-id="${CSS.escape(id)}"]`).forEach((b) => {
       b.classList.add("btn-added");
       b.textContent = "✓ افزوده شد";
     });
@@ -1452,9 +1567,22 @@ class KalamApp {
     document.getElementById("route-meta").textContent = route.hub ? `${route.hub}` : "";
     body.innerHTML = `
       ${strategyMissing ? `<div class="panel-body" style="padding-bottom:0"><div class="heavy-note">${this.strategy === "single_stop" ? "هیچ فروشگاهی همه اقلام سبد را با هم ندارد" : "هیچ مرکز خریدی همه اقلام سبد را ندارد"}؛ بهترین مسیر جایگزین نمایش داده شده است.</div></div>` : ""}
+      <div class="map-box map-route" id="route-map" role="region" aria-label="نقشه مسیر خرید"></div>
       <ol class="timeline">
         ${stops.map((st) => this.stopHtml(st)).join("")}
       </ol>`;
+    drawMap(document.getElementById("route-map"), {
+      route: true,
+      user: this.loc,
+      onAction: this.onDocClick,
+      points: stops.map((st) => ({
+        lat: st.lat, lon: st.lon, kind: "stop", num: st.step_number, title: st.shop_name,
+        html: `<strong>${faNum(st.step_number)}. ${esc(st.shop_name)}</strong>
+          <div class="faint">${locationLine(st.parsed_address || {})}</div>
+          <div class="faint">${esc((st.hours && st.hours.label) || "")}</div>
+          <div class="map-popup-actions">${mapLink(st.lat, st.lon)}</div>`,
+      })),
+    });
 
     const best = (data.available_hubs || [])[0];
     const single = data.best_single_stop;
@@ -1558,6 +1686,7 @@ class KalamApp {
     const open = force === undefined ? panel.hidden : force;
     panel.hidden = !open;
     fab.setAttribute("aria-expanded", String(open));
+    this.applyDock();
     if (open) {
       this.updateAssistantContext();
       this.renderChatPrompts();
@@ -1566,13 +1695,191 @@ class KalamApp {
     }
   }
 
+  /* ---------- دستیار کنار صفحه و حالت ایجنت ---------- */
+
+  get docked() {
+    if (this._docked === undefined) this._docked = readStore(LS_DOCK, true);
+    return this._docked;
+  }
+
+  setDocked(value) {
+    this._docked = value;
+    writeStore(LS_DOCK, value);
+    this.applyDock();
+  }
+
+  // در صفحه عریض دستیار کنار صفحه ثابت می‌شود و محتوای صفحه کنارش جا باز می‌کند (نه روی آن)
+  applyDock() {
+    const open = !document.getElementById("assistant").hidden;
+    const wide = window.matchMedia(DOCK_QUERY).matches;
+    const docked = open && wide && this.docked;
+    const changed = document.body.classList.contains("assistant-docked") !== docked;
+    document.body.classList.toggle("assistant-docked", docked);
+    const btn = document.getElementById("dock-btn");
+    if (btn) {
+      btn.hidden = !wide;
+      btn.setAttribute("aria-pressed", String(this.docked));
+      btn.title = this.docked ? "شناور کردن دستیار" : "ثابت کنار صفحه";
+    }
+    // نقشه‌های صفحه با تغییر عرض باید اندازه جدید را بگیرند
+    if (changed) setTimeout(() => window.dispatchEvent(new Event("resize")), 260);
+  }
+
+  copyText(text) {
+    if (!text) return;
+    const done = () => this.toast("متن کپی شد.", "success");
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, () => this.toast("کپی انجام نشد؛ متن را دستی انتخاب کنید.", "error"));
+    else {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { this.toast("کپی انجام نشد؛ متن را دستی انتخاب کنید.", "error"); }
+      ta.remove();
+    }
+  }
+
+  /* ---------- ایجنت داخل دستیار: هر کار ایجنت به شکل تایم‌لاین در همین گفتگو اجرا می‌شود ---------- */
+
+  agentShell(goal) {
+    const box = this.appendMsg("bot", "", `
+      <div class="mission">
+        <div class="mission-head"><span class="mission-badge">🤖 ایجنت کَلَم</span><span class="mission-goal">${esc(goal)}</span></div>
+        <ol class="mission-steps"><li class="mission-step is-running"><span class="mission-icon"></span><div><strong>شروع…</strong></div></li></ol>
+      </div>`);
+    box.classList.add("msg-mission");
+    return box;
+  }
+
+  scrollChat() {
+    const b = document.getElementById("chat-messages");
+    b.scrollTop = b.scrollHeight;
+  }
+
+  // قدم‌ها یکی‌یکی «اجرا» می‌شوند تا کاربر ببیند ایجنت چه کرد و چرا
+  async playSteps(box, steps) {
+    const list = box.querySelector(".mission-steps");
+    list.innerHTML = "";
+    for (const st of steps) {
+      const li = document.createElement("li");
+      li.className = "mission-step is-running";
+      li.innerHTML = `<span class="mission-icon"></span><div><strong>${esc(st.title)}</strong><div class="mission-detail faint">در حال انجام…</div></div>`;
+      list.appendChild(li);
+      this.scrollChat();
+      await new Promise((r) => setTimeout(r, 400));
+      li.className = `mission-step is-${st.status === "ok" ? "ok" : st.status === "bad" ? "bad" : "warn"}`;
+      li.querySelector(".mission-detail").outerHTML = `<div class="mission-detail">${esc(st.detail)}</div>
+        ${(st.lines || []).length ? `<ul class="mission-lines">${st.lines.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}`;
+      this.scrollChat();
+    }
+  }
+
+  appendSuggestions(box, prompts, label = "💡 قدم بعدی:") {
+    if (!prompts || !prompts.length) return;
+    const sug = document.createElement("div");
+    sug.className = "msg-suggestions";
+    sug.innerHTML = `<span class="msg-suggestions-label">${label}</span><div class="msg-suggestions-chips">${prompts.map((p) => `<button type="button" class="suggestion-chip" data-action="chat-prompt" data-text="${esc(p)}">${esc(p)}</button>`).join("")}</div>`;
+    box.appendChild(sug);
+  }
+
+  contactButtons(channels, draft) {
+    return `${(channels || []).filter((c) => c.real).map((c) => `<a class="btn btn-ghost btn-sm" href="${esc(c.url)}" target="_blank" rel="noopener nofollow">${esc(c.label)}</a>`).join("")}
+      ${draft ? `<button type="button" class="btn btn-ghost btn-sm" data-action="copy-text" data-text="${esc(draft)}">کپی پیام برای فروشنده</button>` : ""}`;
+  }
+
+  // پاسخ «mission» از /api/chat: مأموریت کامل خرید
+  async renderMission(data) {
+    const box = this.agentShell(data.goal || "");
+    await this.playSteps(box, data.steps || []);
+    const r = data.result;
+    const extra = document.createElement("div");
+    extra.className = "mission-result";
+    if (r) {
+      this.productCache[r.product.product_id] = { id: r.product.product_id, title: r.product.title, price: r.price_toman, image: null };
+      const s = r.shop;
+      const inCart = this.cart.some((c) => c.id === r.product.product_id);
+      const decisionCls = { go: "ok", call_first: "warn", alternative: "bad" }[r.decision.action] || "warn";
+      extra.innerHTML = `
+        <div class="mission-decision is-${decisionCls}">${esc(r.decision.label)}</div>
+        <div class="mission-summary">${esc(data.message).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")}</div>
+        <div class="mission-facts">
+          <div><span>فروشگاه</span><strong>${esc(s.name)}</strong></div>
+          <div><span>آدرس</span><strong>${locationLine(s.parsed_address || {})}</strong></div>
+          <div><span>قیمت</span><strong>${faNum(r.price_toman)} تومان</strong></div>
+          ${r.distance_km !== null && r.distance_km !== undefined ? `<div><span>فاصله</span><strong>${kmText(r.distance_km)}</strong></div>` : ""}
+          <div><span>زمان مراجعه</span><strong>${esc(r.visit.label)}</strong></div>
+        </div>
+        <div class="map-box map-mission" role="region" aria-label="نقشه نتیجه ایجنت"></div>
+        <div class="mission-actions">
+          <button type="button" class="btn btn-primary btn-sm msg-card-btn ${inCart ? "btn-added" : ""}" data-action="add-cart" data-id="${esc(r.product.product_id)}">${inCart ? "✓ افزوده شد" : "افزودن به سبد"}</button>
+          <button type="button" class="btn btn-outline btn-sm" data-action="wayfinding" data-shop="${esc(s.shop_id)}">مسیر داخل پاساژ</button>
+          <a class="btn btn-ghost btn-sm" href="#/product/${encodeURIComponent(r.product.product_id)}">صفحه کالا</a>
+          ${this.contactButtons(r.contact_channels, r.chat_draft_text)}
+        </div>
+        ${r.alternatives && r.alternatives.length ? `<div class="mission-alts faint">جایگزین‌ها: ${r.alternatives.map((a) => `${esc(a.name)} (${faNum(a.price_toman)} تومان)`).join("، ")}</div>` : ""}
+        ${data.notice ? `<div class="mission-notice">${esc(data.notice)}</div>` : ""}`;
+      box.querySelector(".msg-extra").appendChild(extra);
+      const points = [
+        { lat: s.lat, lon: s.lon, kind: "best", title: s.name, html: `<strong>${esc(s.name)}</strong><div>${faNum(r.price_toman)} تومان</div><div class="faint">${esc(s.hours.label)}</div>` },
+        ...(r.alternatives || []).map((a) => ({
+          lat: a.lat, lon: a.lon, kind: mapPinKind(a.hours && a.hours.state), title: a.name,
+          html: `<strong>${esc(a.name)}</strong><div>${faNum(a.price_toman)} تومان</div><div class="faint">${esc((a.hours && a.hours.label) || "")}</div>`,
+        })),
+      ];
+      const mapEl = extra.querySelector(".map-mission");
+      if (points.some((pt) => hasCoord(pt.lat, pt.lon))) drawMap(mapEl, { points, user: this.loc, onAction: this.onDocClick });
+      else mapEl.remove();
+    } else {
+      extra.innerHTML = `<div class="mission-summary">${esc(data.message || "")}</div>`;
+      box.querySelector(".msg-extra").appendChild(extra);
+    }
+    this.appendSuggestions(box, data.suggested_prompts);
+    this.scrollChat();
+  }
+
+  // پیگیری با یک فروشنده (از صفحه کالا، کارت پیشنهاد یا مسیر سبد) هم داخل دستیار اجرا می‌شود
+  async runFollowUp(offerId, productId, shopId, shopName) {
+    this.activeShopId = shopId;
+    this.activeProductId = productId || this.activeProductId;
+    if (document.getElementById("assistant").hidden) this.toggleAssistant(true);
+    this.appendMsg("user", `پیگیری با ${shopName || "فروشنده"}`);
+    const box = this.agentShell(`پیگیری با ${shopName || "فروشنده"}`);
+    let r;
+    try {
+      r = await postJSON("/api/agent/follow-up", { offer_id: offerId });
+    } catch (e) {
+      box.querySelector(".mission-steps").innerHTML = `<li class="mission-step is-bad"><span class="mission-icon"></span><div><strong>ارتباط با سرور برقرار نشد</strong><div class="faint">دوباره امتحان کنید.</div></div></li>`;
+      return;
+    }
+    await this.playSteps(box, r.steps.map((st) => ({
+      title: st.label, status: st.status, detail: st.text, lines: st.question ? [`ایجنت پرسید: ${st.question}`] : [],
+    })));
+    const d = r.decision;
+    const cls = { go: "ok", call_first: "warn", alternative: "bad" }[d.action] || "warn";
+    const extra = document.createElement("div");
+    extra.className = "mission-result";
+    extra.innerHTML = `
+      <div class="mission-decision is-${cls}">${esc(d.label)}</div>
+      <div class="mission-summary">${esc(d.text)}</div>
+      ${(r.alternatives || []).map((f) => `
+        <div class="mission-facts"><div><span>${esc(f.name)}</span><strong>${faNum(f.price_toman)} تومان · ${esc((f.hours && f.hours.label) || "")}</strong></div></div>`).join("")}
+      <div class="mission-actions">
+        <button type="button" class="btn btn-outline btn-sm" data-action="wayfinding" data-shop="${esc(shopId)}">مسیر داخل پاساژ</button>
+        ${this.contactButtons(r.contact_channels, r.chat_draft_text)}
+      </div>
+      <div class="mission-notice">${esc(r.notice)}</div>`;
+    box.querySelector(".msg-extra").appendChild(extra);
+    this.appendSuggestions(box, ["برای همین کالا هماهنگ کن", "کدوم مغازه جنس بهتر داره", "آیا همین مغازه این لوازم جانبی رو یکجا داره؟"]);
+    this.scrollChat();
+  }
+
   greet() {
-    const starters = this.getDynamicPrompts();
+    const starters = [...this.getDynamicPrompts().slice(0, 3), AGENT_STARTERS[0]];
     this.appendMsg(
       "bot",
-      "سلام! من کَلَم هستم، مشاور خرید حضوری شما در بازار تهران. نام کالا، محدوده، بودجه و شرایط قسطی را بگویید (مثلاً «گوشی A55 قسطی در چارسو تا ۲۵ میلیون»)؛ ارزان‌ترین مغازه معتبر، ساعت کاری، استعلام گارانتی و مسیر دقیق مغازه را به شما نشان می‌دهم.",
+      "سلام! من کَلَم هستم، مشاور و ایجنت خرید حضوری شما در بازار تهران.\n• **بپرسید:** «گوشی A55 قسطی در چارسو تا ۲۵ میلیون» — ارزان‌ترین مغازه معتبر، ساعت کاری و آدرس دقیقش را می‌گویم.\n• **کار بسپارید:** «... پیدا کن و هماهنگ کن» — 🤖 خودم کالا را پیدا می‌کنم، فروشگاه‌ها را مقایسه و با آن‌ها پیگیری می‌کنم و برنامه مراجعه می‌دهم.",
       "",
-      starters
+      [...new Set(starters)],
     );
   }
 
@@ -1581,7 +1888,9 @@ class KalamApp {
     this.chatState = null;
     this.tree = null;
     this.activeProductId = null;
+    this.activeShopId = null;
     this.currentProduct = null;
+    this.contextPrompts = null;
     this.loc = readStore(LS_LOC, null);
     this.compare = readStore(LS_COMPARE, []);
     this.updateAssistantContext();
@@ -1611,6 +1920,7 @@ class KalamApp {
     if (customPrompts && customPrompts.length) {
       return customPrompts;
     }
+    if (this.contextPrompts && this.contextPrompts.length) return this.contextPrompts.slice(0, 5);
     const target = this.currentProduct || (this.cart && this.cart.length ? this.cart[this.cart.length - 1] : null);
     if (target || (this.cart && this.cart.length > 0)) {
       const prompts = [];
@@ -1686,10 +1996,9 @@ class KalamApp {
     return CHAT_PROMPTS;
   }
 
+  // پیشنهادهای گفتگو داخل حباب پیام‌ها نمایش داده می‌شوند؛ این تابع فقط پیشنهادهای زمینه فعلی را نگه می‌دارد
   renderChatPrompts(customPrompts = null) {
-    const box = document.getElementById("chat-prompts");
-    if (!box) return;
-    box.innerHTML = "";
+    if (customPrompts && customPrompts.length) this.contextPrompts = customPrompts;
   }
 
   appendMsg(role, text, extraHtml = "", prompts = null) {
@@ -1712,6 +2021,13 @@ class KalamApp {
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
     return div;
+  }
+
+  missionForProduct(id) {
+    this.activeProductId = id;
+    this.activeShopId = null;
+    this.chatState = { ...(this.chatState || {}), active_product_id: id };
+    this.sendChat("برای همین کالا هماهنگ کن");
   }
 
   async sendChat(text, tree = null) {
@@ -1790,6 +2106,7 @@ class KalamApp {
   }
 
   renderBotResponse(data) {
+    if (data.type === "mission") return this.renderMission(data);
     let extra = "";
     if (data.type === "diagnostic_tree" && data.diagnostic) {
       this.tree = { category_key: data.category_key, steps: data.diagnostic.steps, option_index: null };
@@ -1833,7 +2150,10 @@ class KalamApp {
             </div>
             ${b ? `<div class="msg-card-sub"><span class="faint">${b.distance_km !== null && b.distance_km !== undefined ? `📍 ${kmText(b.distance_km)} از شما · ` : ""}${esc(b.hours)} · ${faNum(p.offline_shops_count)} فروشگاه</span></div>` : ""}
           </div>
-          <button type="button" class="btn btn-outline btn-sm msg-card-btn ${inCart ? 'btn-added' : ''}" data-action="add-cart" data-id="${esc(p.product_id)}">${inCart ? '✓ افزوده شد' : 'افزودن'}</button>
+          <div class="msg-card-actions">
+            <button type="button" class="btn btn-outline btn-sm msg-card-btn ${inCart ? 'btn-added' : ''}" data-action="add-cart" data-id="${esc(p.product_id)}">${inCart ? '✓ افزوده شد' : 'افزودن'}</button>
+            <button type="button" class="btn btn-ghost btn-sm btn-agent" data-action="mission-product" data-id="${esc(p.product_id)}" title="ایجنت فروشگاه‌ها را مقایسه و پیگیری می‌کند">🤖 هماهنگ کن</button>
+          </div>
         </div>`;
       }).join("");
     } else if (data.type === "complementary_recommendations" && data.recommendations) {

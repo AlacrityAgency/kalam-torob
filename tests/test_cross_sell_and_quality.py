@@ -148,7 +148,16 @@ class TestCrossSellAndQuality(unittest.TestCase):
         # ارسال استعلام کیفیت
         inquiry_res = self.assistant.process_message("کدوم مغازه جنس بهتر و گارانتی معتبرتر داره؟", state=state)
         self.assertEqual(inquiry_res["type"], "consultation")
-        self.assertIn("جنس بهتر و برترین کیفیت", inquiry_res["message"])
+        self.assertIn("بهترین شرایط ثبت‌شده", inquiry_res["message"])
+        # آفر کپی یا قیمت پرت نباید به عنوان «ارزان‌ترین» معرفی شود
+        pid = state["active_product_id"]
+        healthy_min = self.conn.execute(
+            "SELECT MIN(price_toman) FROM offers WHERE product_id = ? AND is_copy = 0 AND price_suspect = 0", (pid,)).fetchone()[0]
+        all_min = self.conn.execute("SELECT MIN(price_toman) FROM offers WHERE product_id = ?", (pid,)).fetchone()[0]
+        if all_min < healthy_min:
+            self.assertNotIn(f"{all_min:,}".translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")), inquiry_res["message"])
+        # ادعای اصالت بدون پشتوانه داده نباید ساخته شود
+        self.assertNotIn("۱۰۰٪", inquiry_res["message"])
         # پاسخ باید شامل مقایسه مغازه‌ها و امتیاز اصالت باشد
         self.assertIn("گارانتی", inquiry_res["message"])
 

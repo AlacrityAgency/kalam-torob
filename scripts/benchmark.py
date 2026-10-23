@@ -107,6 +107,10 @@ def measure(db_path, runs=30):
             q="هدفون", conn=conn(), **{**search_args, "credit": True, "open_now": True, "lat": 35.69, "lon": 51.42})),
         ("صفحه کالا با موقعیت کاربر", lambda: main.get_product_details(pid, hub=None, lat=35.69, lon=51.42, conn=conn())),
         ("کالاهای مکمل", lambda: main.get_complementary_items(pid, shop_id=None, conn=conn())),
+        ("ایجنت: مأموریت کامل «گوشی سامسونگ قسطی پیدا کن و هماهنگ کن»", lambda: main.agent_mission(main.MissionRequest(
+            message="گوشی سامسونگ قسطی پیدا کن و هماهنگ کن", user_lat=35.69, user_lon=51.42), conn=conn())),
+        ("دستیار: «کدوم مغازه جنس بهتر داره»", lambda: KalamAssistant(conn()).process_message(
+            "کدوم مغازه جنس بهتر داره", context={"active_product_id": pid})),
         ("پیگیری خودکار با فروشنده", lambda: main.agent_follow_up(main.FollowUpRequest(offer_id=oid), conn=conn())),
         ("دستیار: «گوشی سامسونگ قسطی در فردوسی تا ۲۰ میلیون»", lambda: KalamAssistant(conn()).process_message(
             "گوشی سامسونگ قسطی در فردوسی تا ۲۰ میلیون")),

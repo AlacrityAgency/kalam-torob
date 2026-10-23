@@ -29,6 +29,7 @@ from datetime import datetime, timezone
 WORKSPACE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, WORKSPACE)
 
+from backend.algorithms.ai_product_intelligence import init_product_intelligence_table  # noqa: E402
 from backend.algorithms.credipay import analyze_payment_options  # noqa: E402
 from backend.algorithms.hours import parse_weekly_hours  # noqa: E402
 from backend.algorithms.offer_quality import is_copy_text, suspicious_prices  # noqa: E402
@@ -334,6 +335,8 @@ def build(db_path):
         ("built_at", datetime.now(timezone.utc).isoformat(timespec="seconds")),
     ])
     conn.commit()
+    # کش تحلیل کالا هنگام اجرا پر می‌شود؛ جدولش از قبل ساخته می‌شود تا درخواست‌ها DDL اجرا نکنند
+    init_product_intelligence_table(conn)
     cur.execute("PRAGMA optimize;")
     conn.close()
     return source

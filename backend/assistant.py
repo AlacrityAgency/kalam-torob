@@ -28,6 +28,7 @@ from .algorithms.prompt_generator import extract_model_and_brand, generate_dynam
 from .algorithms.svdp import compute_stock_certainty, generate_inquiry_dossier
 from .algorithms.textutil import to_fa_digits
 from .algorithms.tfra import find_emergency_fallbacks
+from .mission import is_mission, run_mission
 from .nlu import extract
 from .search import OFFER_COLUMNS, offer_matches, place_matches, search_products
 
@@ -88,6 +89,16 @@ class KalamAssistant:
             return response
 
         self.user_loc = (context.get("user_lat"), context.get("user_lon"))
+        # ایجنت داخل همین دستیار است: پیامی که کار کامل می‌خواهد («پیدا کن و هماهنگ کن») مأموریت اجرا می‌کند
+        if is_mission(user_text):
+            response = run_mission(self.conn, user_text, {
+                "current_hub": context.get("current_hub"),
+                "active_product_id": context.get("active_product_id") or state.get("active_product_id"),
+                "user_lat": context.get("user_lat"), "user_lon": context.get("user_lon"),
+            })
+            response["state"] = {**state, **(response.get("state") or {})}
+            response.setdefault("nlu", "local")
+            return response
         slots, source = extract(user_text or "", self.places, state)
         if not slots.get("place") and context.get("current_hub"):
             slots["place"] = context["current_hub"]

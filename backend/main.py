@@ -5,7 +5,7 @@ FastAPI Backend: الگوریتم‌های ۷گانه خرید حضوری، جس
 
 import os
 import sqlite3
-from typing import List, Literal, Optional
+from typing import Annotated, List, Literal, Optional
 
 try:
     from dotenv import load_dotenv
@@ -31,6 +31,7 @@ from .algorithms.prompt_generator import extract_model_and_brand, generate_dynam
 from .algorithms.svdp import INQUIRY_QUESTIONS, compute_stock_certainty, generate_inquiry_dossier, simulate_inquiry
 from .algorithms.tfra import find_emergency_fallbacks
 from .agent import follow_up
+from .mission import run_mission
 from .assistant import KalamAssistant
 from .nlu import llm_enabled
 from .search import SEARCH_STOPWORDS, search_products, tokenize
@@ -450,10 +451,10 @@ def get_complementary_items(product_id: str, shop_id: Optional[str] = None,
 
 @app.get("/api/prompts")
 def get_prompts_endpoint(
-    product_id: Optional[str] = None,
-    shop_id: Optional[str] = None,
-    cart_product_ids: Optional[str] = None,
-    hub: Optional[str] = None,
+    product_id: Annotated[Optional[str], Query(max_length=64)] = None,
+    shop_id: Annotated[Optional[str], Query(max_length=64)] = None,
+    cart_product_ids: Annotated[Optional[str], Query(max_length=2000)] = None,
+    hub: Annotated[Optional[str], Query(max_length=80)] = None,
     conn: sqlite3.Connection = Depends(get_db),
 ):
     """
@@ -492,7 +493,7 @@ def get_prompts_endpoint(
             }
 
     if cart_product_ids:
-        c_ids = [i.strip() for i in cart_product_ids.split(",") if i.strip()]
+        c_ids = list(dict.fromkeys(i.strip() for i in cart_product_ids.split(",") if i.strip()))[:20]
         if c_ids:
             ph = ",".join("?" * len(c_ids))
             c_rows = cursor.execute(f"""
@@ -592,6 +593,23 @@ def agent_follow_up(req: FollowUpRequest, conn: sqlite3.Connection = Depends(get
     if result is None:
         raise HTTPException(status_code=404, detail="آفر یافت نشد.")
     return result
+
+
+class MissionRequest(BaseModel):
+    message: str = Field("", max_length=300)
+    current_hub: Optional[str] = Field(None, max_length=80)
+    active_product_id: Optional[str] = Field(None, max_length=64)
+    user_lat: Optional[float] = Field(None, ge=-90, le=90)
+    user_lon: Optional[float] = Field(None, ge=-180, le=180)
+
+
+@app.post("/api/agent/mission")
+def agent_mission(req: MissionRequest, conn: sqlite3.Connection = Depends(get_db)):
+    """حالت ایجنت: فهم درخواست ← جستجو ← مقایسه فروشگاه‌ها ← پیگیری ← برنامه مراجعه ← خرید یکجا"""
+    return run_mission(conn, req.message, {
+        "current_hub": req.current_hub, "active_product_id": req.active_product_id,
+        "user_lat": req.user_lat, "user_lon": req.user_lon,
+    })
 
 
 @app.get("/api/inquiry/questions")

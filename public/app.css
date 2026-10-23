@@ -587,3 +587,87 @@ a.tag:hover { text-decoration: underline; }
   .seller-sort { padding: 8px 14px; }
   .compare-link .cart-link-text { display: none; }
 }
+
+/* ---------- نقشه ---------- */
+.map-box { position: relative; height: 280px; margin: 0 16px 14px; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: #eef1f4; z-index: 0; }
+.map-box.map-hubs { margin: 12px 0 0; height: 300px; }
+.map-box.map-route { margin: 14px 16px 4px; height: 260px; }
+.kalam-map { direction: ltr; font-family: inherit; }
+.kalam-map .leaflet-popup-content { margin: 10px 12px; font-family: Vazirmatn, Tahoma, sans-serif; }
+.map-popup { direction: rtl; text-align: right; font-size: 12.5px; line-height: 1.8; color: var(--text); }
+.map-popup hr { border: 0; border-top: 1px solid var(--divider); margin: 8px 0; }
+.map-popup .faint { color: var(--text-3, #767676); font-size: 11.5px; }
+.map-popup-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; }
+.map-popup-actions .btn { height: 30px; padding: 0 10px; font-size: 12px; color: #fff; }
+.map-pin { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: #8a8f98; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .3); color: #fff; font: 700 11px/1 Vazirmatn, Tahoma, sans-serif; }
+.map-pin:empty::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #fff; }
+.map-pin > b { transform: rotate(45deg); }
+.pin-best { background: var(--primary); width: 34px; height: 34px; }
+.pin-stop { background: var(--primary); }
+.pin-open { background: #1f9d55; }
+.pin-closed { background: #b9bec6; }
+.pin-unknown { background: #e0a100; }
+.pin-hub { background: #3366cc; }
+.map-user { display: block; width: 18px; height: 18px; border-radius: 50%; background: #1a73e8; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(26, 115, 232, .25); }
+.map-offline::after { content: "نقشه پایه بدون اینترنت در دسترس نیست؛ جای نشانگرها نسبت به هم درست است."; position: absolute; inset: auto 8px 8px 8px; z-index: 500; padding: 6px 10px; border-radius: var(--radius); background: rgba(255, 255, 255, .92); color: #555; font-size: 11.5px; direction: rtl; text-align: center; pointer-events: none; }
+.map-fallback { display: grid; place-items: center; height: 100%; color: var(--text-2); font-size: 13px; }
+@media (max-width: 720px) {
+  .map-box { height: 220px; margin: 0 12px 12px; }
+  .map-box.map-hubs { height: 240px; }
+}
+
+/* ---------- دستیار کنار صفحه (dock) ---------- */
+:root { --dock-w: 400px; }
+body.assistant-docked { padding-left: var(--dock-w); }
+body.assistant-docked .assistant { top: 0; bottom: 0; left: 0; width: var(--dock-w); max-width: var(--dock-w); height: 100vh; border-radius: 0; border: 0; border-right: 1px solid var(--border); box-shadow: 4px 0 24px -12px rgba(0, 0, 0, .18); animation: dock-in .2s ease-out; }
+body.assistant-docked .assistant-fab { display: none; }
+body.assistant-docked .toast-stack { left: calc(50% + var(--dock-w) / 2); }
+@keyframes dock-in { from { transform: translateX(-24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.dock-btn[aria-pressed="true"] { color: var(--primary); background: var(--primary-soft); }
+
+.btn-agent { border-color: var(--primary-border); color: var(--primary); }
+.msg-card-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.msg-card-actions .btn { height: 30px; padding: 0 10px; font-size: 11.5px; }
+
+/* ---------- تایم‌لاین مأموریت ایجنت ---------- */
+.msg-mission { max-width: 100%; width: 100%; }
+.mission-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.mission-badge { flex-shrink: 0; padding: 2px 9px; border-radius: 10px; background: #1f2937; color: #fff; font-size: 11px; font-weight: 700; }
+.mission-goal { font-size: 12px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mission-steps { list-style: none; margin: 0; padding: 0; position: relative; }
+.mission-steps::before { content: ""; position: absolute; top: 10px; bottom: 10px; right: 10px; width: 2px; background: var(--divider); }
+.mission-step { position: relative; display: flex; gap: 10px; padding: 6px 0; font-size: 12.5px; line-height: 1.7; animation: step-in .25s ease-out; }
+.mission-step strong { font-size: 12.5px; }
+.mission-icon { position: relative; z-index: 1; flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: #fff; border: 2px solid var(--border); font-size: 11px; font-weight: 800; color: #fff; }
+.mission-step.is-running .mission-icon { border-color: var(--primary); border-top-color: transparent; animation: spin .8s linear infinite; }
+.mission-step.is-ok .mission-icon { background: #1f9d55; border-color: #1f9d55; }
+.mission-step.is-ok .mission-icon::after { content: "✓"; }
+.mission-step.is-warn .mission-icon { background: #e0a100; border-color: #e0a100; }
+.mission-step.is-warn .mission-icon::after { content: "!"; }
+.mission-step.is-bad .mission-icon { background: var(--primary); border-color: var(--primary); }
+.mission-step.is-bad .mission-icon::after { content: "✕"; }
+.mission-detail { color: var(--text); }
+.mission-lines { margin: 2px 0 0; padding: 0 16px 0 0; color: var(--text-2); font-size: 11.5px; }
+.mission-lines li { margin: 1px 0; }
+.mission-result { margin-top: 10px; padding: 12px; border: 1px solid var(--primary-border); border-radius: var(--radius-lg); background: var(--surface); }
+.mission-decision { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 800; margin-bottom: 6px; }
+.mission-decision.is-ok { background: #e7f6ec; color: #17733d; }
+.mission-decision.is-warn { background: #fff4d6; color: #8a6200; }
+.mission-decision.is-bad { background: var(--primary-soft); color: var(--primary); }
+.mission-summary { font-size: 12.5px; line-height: 1.9; }
+.mission-facts { display: grid; gap: 4px; margin: 8px 0; font-size: 12px; }
+.mission-facts > div { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px dashed var(--divider); padding: 3px 0; }
+.mission-facts span { color: var(--text-2); flex-shrink: 0; }
+.mission-facts strong { text-align: left; font-weight: 600; }
+.map-box.map-mission { margin: 8px 0; height: 190px; }
+.mission-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.mission-actions .btn { height: 32px; padding: 0 10px; font-size: 12px; }
+.mission-alts { margin-top: 8px; font-size: 11.5px; }
+.mission-notice { margin-top: 8px; padding: 6px 8px; border-radius: var(--radius); background: var(--surface-2); color: var(--text-2); font-size: 11px; }
+@keyframes step-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .mission-step, body.assistant-docked .assistant { animation: none; }
+  .mission-step.is-running .mission-icon { animation-duration: 3s; }
+}
+.map-mission.map-offline::after { content: "نقشه پایه آفلاین است"; inset: auto auto 6px 6px; padding: 3px 8px; font-size: 10.5px; }

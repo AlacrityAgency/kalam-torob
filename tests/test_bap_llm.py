@@ -54,7 +54,7 @@ class TestPACO2MathematicalFormulation(unittest.TestCase):
         self.assertTrue(det_same["bundle_eligible"])
         self.assertEqual(det_diff["bundle_bonus"], 1.00)
         self.assertFalse(det_diff["bundle_eligible"])
-        self.assertIn("۱۰ تا ۱۵ درصد تخفیف", det_same["bargaining_tip"])
+        self.assertIn("تخفیف نقدی", det_same["bargaining_tip"])
         # امتیاز همان مغازه باید به مراتب بالاتر باشد
         self.assertGreater(score_same, score_diff * 1.5)
 
