@@ -27,7 +27,8 @@ except ImportError:
 
 from .paco import calculate_paco_score
 from .prompt_generator import extract_model_and_brand
-from .textutil import to_fa_digits
+from .hours import hours_status
+from .textutil import to_fa_digits, to_latin_digits
 
 log = logging.getLogger("kalam.ai_product_intel")
 
@@ -38,6 +39,8 @@ _MAX_L1_SIZE = 5000
 
 def init_product_intelligence_table(conn: sqlite3.Connection) -> None:
     """ایجاد جدول کش پایدار تحلیل هوش مصنوعی برای اجناس کاتالوگ"""
+    if conn.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'product_ai_intelligence'").fetchone():
+        return
     conn.execute("""
         CREATE TABLE IF NOT EXISTS product_ai_intelligence (
             product_id TEXT PRIMARY KEY,
@@ -392,11 +395,17 @@ def get_product_intelligence(
     if not force_refresh and pid and pid in _L1_MEMO_CACHE:
         return _L1_MEMO_CACHE[pid]
 
-    # اطمینان از وجود جدول کش در SQLite
-    init_product_intelligence_table(conn)
+    # جدول کش در build_db ساخته می‌شود؛ اگر نبود و پایگاه داده قفل یا فقط‌خواندنی بود،
+    # بدون کش L2 ادامه می‌دهیم تا درخواست با خطای ۵۰۰ تمام نشود
+    try:
+        init_product_intelligence_table(conn)
+        db_cache = True
+    except sqlite3.Error as e:
+        log.warning("AI intelligence cache table unavailable: %s", e)
+        db_cache = False
 
     # بررسی کش L2 پایگاه داده
-    if not force_refresh and pid:
+    if db_cache and not force_refresh and pid:
         cursor = conn.cursor()
         row = cursor.execute("""
             SELECT facets_json, prompts_json, product_role, source
@@ -464,7 +473,7 @@ def get_product_intelligence(
         intel = _heuristic_generate_intelligence(title, category, brand)
 
     # ذخیره دائمی در کش دیتابیس (Memoize) - فقط در صورت معتبر بودن ابعاد
-    if pid and intel.get("facets"):
+    if db_cache and pid and intel.get("facets"):
         try:
             conn.execute("""
                 INSERT OR REPLACE INTO product_ai_intelligence
@@ -514,7 +523,7 @@ def score_offer_quality(
     w_score = 0.10
     w_label = "بدون گارانتی شرکتی"
     if warranty_raw:
-        w_text = str(warranty_raw).lower()
+        w_text = to_latin_digits(str(warranty_raw)).lower()
         if any(k in w_text for k in ("18", "24", "شرکتی", "تعویض", "2 سال", "5 سال", "سام سرویس", "مدیا پردازش")):
             w_score = 1.0
             w_label = "گارانتی رسمی و معتبر شرکتی"
@@ -539,7 +548,7 @@ def score_offer_quality(
     total = round(total, 3)
 
     if auth_score == 1.0 and total >= 0.78:
-        badge = "🥇 جنس برتر و اورجینال (گارانتی معتبر شرکتی)"
+        badge = "🥇 گارانتی معتبر شرکتی ثبت‌شده، بدون نشانه کپی"
     elif auth_score == 1.0:
         badge = "نسخه اقتصادی / معمولی"
     else:
@@ -754,6 +763,64 @@ def find_grounded_complementary_items(
 # In-Store Shopping Consultation & Warranty Advisory Engine
 # ---------------------------------------------------------------------------
 
+def _fa_toman(value) -> str:
+    return f"{to_fa_digits(f'{int(value):,}')} تومان"
+
+
+def _shop_hours(cursor, shop_id):
+    row = cursor.execute("SELECT weekly_hours FROM shops WHERE shop_id = ?", (shop_id,)).fetchone()
+    return row[0] if row else None
+
+
+def _product_kind(product: Optional[Dict[str, Any]]) -> str:
+    text = f"{(product or {}).get('title') or ''} {(product or {}).get('category') or ''}"
+    if any(w in text for w in ("ساعت", "واچ", "مچ بند")):
+        return "watch"
+    if any(w in text for w in ("گوشی", "موبایل", "تبلت", "لپ تاپ", "لپ‌تاپ", "هدفون", "هندزفری", "کنسول")):
+        return "device"
+    if any(w in text for w in ("دریل", "فرز", "اره", "پیچ گوشتی", "ابزار", "موتور برق", "پمپ")):
+        return "tool"
+    return "general"
+
+
+_WARRANTY_GUIDES = {
+    "watch": """✅ **معمولاً تحت پوشش:** کارکرد موتور (توقف، جلو/عقب افتادن غیرعادی) و عیوب ساخت.
+❌ **معمولاً خارج از پوشش:** ضربه، شکستگی شیشه، استهلاک بند، و نفوذ آب وقتی دسته کوک باز مانده باشد.""",
+    "device": """✅ **معمولاً تحت پوشش:** عیوب سخت‌افزاری کارخانه (برد، باتری در بازه اعلامی، صفحه‌نمایش بدون ضربه).
+❌ **معمولاً خارج از پوشش:** ضربه، شکستگی، نفوذ مایعات و باز شدن دستگاه خارج از نمایندگی.
+📱 برای گوشی: رجیستری IMEI را در سامانه همتا (`*7777#`) پیش از پرداخت بررسی کنید.""",
+    "tool": """✅ **معمولاً تحت پوشش:** موتور، آرمیچر و سوئیچ در صورت نقص فنی.
+❌ **معمولاً خارج از پوشش:** زغال، تیغه و مته (مصرفی)، و سوختن موتور بر اثر ولتاژ نامناسب یا استفاده بیش از ظرفیت.""",
+    "general": """✅ **معمولاً تحت پوشش:** عیوب ساخت و کارکرد طبق شرایط برگه گارانتی.
+❌ **معمولاً خارج از پوشش:** آسیب فیزیکی و استفاده خارج از دستورالعمل.""",
+}
+
+_INSPECTION_GUIDES = {
+    "watch": """۱. وزن، قفل بند و سایز را روی دست امتحان کنید؛ تنظیم بند معمولاً همان‌جا انجام می‌شود.
+۲. دسته کوک را در حالت‌های مختلف بچرخانید؛ باید نرم و بدون گیر باشد.
+۳. مهلت تست و شرایط گارانتی را در فاکتور بنویسند.""",
+    "device": """۱. پلمپ جعبه را جلوی خودتان باز کنند و سریال جعبه با دستگاه یکی باشد.
+۲. صفحه‌نمایش، دوربین، بلندگو، شارژ و دکمه‌ها را همان‌جا امتحان کنید.
+۳. مهلت تست و نام شرکت گارانتی را در فاکتور بنویسند.""",
+    "tool": """۱. دستگاه را همان‌جا روشن کنید؛ صدای موتور یکنواخت و بدون بوی سوختگی باشد.
+۲. سه‌نظام/قفل تیغه و کلید تنظیم دور را امتحان کنید.
+۳. لوازم داخل جعبه (کیف، زغال یدک، آچار) را با فهرست جعبه تطبیق دهید.""",
+    "general": """۱. کالا را از نظر ظاهری و سلامت بسته‌بندی بررسی کنید.
+۲. اگر برقی است، همان‌جا روشن و امتحان کنید.
+۳. شرایط مرجوعی و گارانتی را در فاکتور بنویسند.""",
+}
+
+
+def _warranty_guide(product: Optional[Dict[str, Any]]) -> str:
+    return _WARRANTY_GUIDES[_product_kind(product)] + """
+
+💡 **پای پیشخوان:** کارت یا برگه گارانتی با مهر فروشگاه، تاریخ و شماره سریال بگیرید و مدت گارانتی را در فاکتور بنویسند."""
+
+
+def _inspection_guide(product: Optional[Dict[str, Any]]) -> str:
+    return _INSPECTION_GUIDES[_product_kind(product)]
+
+
 def answer_consultation_inquiry(
     conn: sqlite3.Connection,
     query: str,
@@ -796,7 +863,7 @@ def answer_consultation_inquiry(
                     "name": row[7],
                     "price": row[5],
                     "parsed_address": {"mall_name": row[8] or "تهران", "floor_label": "فروشگاه حضوری"},
-                    "hours": "ساعت کاری ثبت‌شده",
+                    "hours": hours_status(row[11])["label"],
                     "distance_km": None,
                 }
             }
@@ -824,42 +891,43 @@ def answer_consultation_inquiry(
             ORDER BY o.price_toman ASC
         """, (active_product_id,)).fetchall()
 
-        if offers_rows:
+        # آفر کپی یا با قیمت پرت در مقایسه کیفیت و قیمت شرکت داده نمی‌شود؛ فقط تعدادش گفته می‌شود
+        healthy = [r for r in offers_rows if not r[12] and not r[13]]
+        excluded = len(offers_rows) - len(healthy)
+        if healthy:
             scored_offers = []
-            for r in offers_rows:
-                cand_offer = {
-                    "price_toman": r[5], "warranty": r[10], "is_copy": r[12], "price_suspect": r[13],
-                }
+            for r in healthy:
+                cand_offer = {"price_toman": r[5], "warranty": r[10], "is_copy": r[12], "price_suspect": r[13]}
                 q_score, q_badge, w_label = score_offer_quality(cand_offer, {"is_verified": r[14]})
                 scored_offers.append((q_score, r[5], q_badge, w_label, r))
 
-            # بالاترین امتیاز کیفیت
-            scored_offers.sort(key=lambda x: (x[0], -x[1]), reverse=True)
+            # بالاترین امتیاز کیفیت؛ در امتیاز برابر، ارزان‌تر
+            scored_offers.sort(key=lambda x: (-x[0], x[1]))
             best_q = scored_offers[0]
             cheapest = min(scored_offers, key=lambda x: x[1])
 
             top_r = best_q[4]
             top_shop_name = top_r[7]
             top_location = top_r[8] or "تهران"
-            top_price_str = f"{to_fa_digits(f'{int(best_q[1]):,}')} تومان"
-            top_warranty = best_q[3]
-            cheap_price_str = f"{to_fa_digits(f'{int(cheapest[1]):,}')} تومان"
-            cheap_shop_name = cheapest[4][7]
+            top_hours = hours_status(top_r[11])
 
-            msg = f"""در بررسی فروشگاه‌های بازار برای «{top_r[1]}»:\n\n"""
-            msg += f"""🥇 **جنس بهتر و برترین کیفیت (توصیه کارشناسی کَلَم):**\n"""
+            msg = f"""در بررسی {to_fa_digits(len(healthy))} فروشگاه برای «{top_r[1]}»:\n\n"""
+            msg += """🥇 **بهترین شرایط ثبت‌شده (گارانتی و اعتبار فروشگاه):**\n"""
             msg += f"""فروشگاه **{top_shop_name}** ({top_location})\n"""
-            msg += f"""• **قیمت:** {top_price_str}\n"""
-            msg += f"""• **گارانتی:** {top_warranty}\n"""
-            msg += f"""• **اصالت و اعتبار:** نسخه ۱۰۰٪ اورجینال شرکتی در فروشگاه دارای نماد اعتماد ترب\n\n"""
+            msg += f"""• **قیمت:** {_fa_toman(best_q[1])}\n"""
+            msg += f"""• **گارانتی:** {best_q[3]}\n"""
+            msg += f"""• **اعتبار:** {"فروشگاه نشان تأیید ترب دارد" if top_r[14] else "نشان تأیید ترب ثبت نشده"}؛ این آفر برچسب کپی یا قیمت مشکوک ندارد\n"""
+            msg += f"""• **ساعت کاری:** {top_hours["label"]}\n\n"""
 
             if cheapest[1] < best_q[1]:
-                diff_toman = best_q[1] - cheapest[1]
-                diff_str = f"{to_fa_digits(f'{int(diff_toman):,}')} تومان"
-                msg += f"""💡 **مقایسه با نسخه اقتصادی:**\n"""
-                msg += f"""ارزان‌ترین قیمت در بازار متعلق به فروشگاه **{cheap_shop_name}** با قیمت {cheap_price_str} است ({diff_str} ارزان‌تر)، اما {cheapest[3]} است. اگر سلامت و طول عمر دستگاه و گارانتی رسمی برایتان اولویت دارد، خرید از **{top_shop_name}** باکیفیت‌ترین گزینه است."""
+                msg += """💡 **مقایسه با ارزان‌ترین آفر معتبر:**\n"""
+                msg += (f"""فروشگاه **{cheapest[4][7]}** با {_fa_toman(cheapest[1])} ({_fa_toman(best_q[1] - cheapest[1])} ارزان‌تر) """
+                        f"""می‌فروشد، با {cheapest[3]}. اگر گارانتی برایتان مهم‌تر است، **{top_shop_name}** گزینه بهتری است.""")
             else:
-                msg += f"""💡 **نکته طلایی:** این فروشگاه علاوه بر بالاترین سطح اصالت و گارانتی شرکتی، منصفانه‌ترین قیمت بازار را نیز ارائه می‌دهد."""
+                msg += """💡 این فروشگاه ارزان‌ترین آفر معتبر را هم دارد."""
+            if excluded:
+                msg += f"""\n\n⚠️ {to_fa_digits(excluded)} آفر دیگر به دلیل برچسب کپی/غیراصل یا قیمت غیرعادی در این مقایسه نیامده است."""
+            msg += """\n\nاصالت کالا فقط از روی داده‌های ثبت‌شده در ترب سنجیده شده؛ پلمپ و گارانتی را پای پیشخوان بررسی کنید."""
 
             best_product_card = {
                 "product_id": top_r[0],
@@ -868,14 +936,14 @@ def answer_consultation_inquiry(
                 "brand": top_r[3],
                 "image_url": top_r[4],
                 "min_price": top_r[5],
-                "offline_shops_count": len(offers_rows),
+                "offline_shops_count": len(healthy),
                 "best_shop": {
                     "shop_id": top_r[6],
                     "name": top_r[7],
                     "price": top_r[5],
                     "hub": top_r[8],
                     "parsed_address": {"mall_name": top_r[8] or "تهران", "floor_label": "فروشگاه حضوری"},
-                    "hours": "ساعت کاری ثبت‌شده",
+                    "hours": top_hours["label"],
                     "distance_km": None,
                     "quality_badge": best_q[2],
                     "quality_score": best_q[0],
@@ -899,76 +967,64 @@ def answer_consultation_inquiry(
         target_sname = s_row[1] if s_row else "این فروشگاه"
         target_loc = s_row[2] if s_row else "تهران"
 
-        # بررسی موجودی اقلام جانبی یا مکمل در همین مغازه
-        companion_rows = cursor.execute("""
-            SELECT p.product_id, p.persian_title, p.category_name, o.price_toman, o.warranty, o.is_copy
-            FROM offers o
-            JOIN products p ON o.product_id = p.product_id
-            WHERE o.shop_id = ? AND o.product_id != ? AND o.price_toman IS NOT NULL
-            ORDER BY o.price_toman ASC LIMIT 3
-        """, (effective_sid, active_product_id or "")).fetchall()
+        companions = []
+        if product:
+            base = {"product_id": product["product_id"], "title": product["title"],
+                    "category_name": product["category"], "brand_name": product["brand"], "price": product.get("min_price") or 0}
+            base_shop = {"shop_id": effective_sid, "name": target_sname, "address": s_row[3] if s_row else None, "location_label": target_loc}
+            companions, _ = find_grounded_complementary_items(conn, base, base_shop, limit=20)
+        same_shop = [c for c in companions if c.get("is_same_shop")][:3]
 
-        if companion_rows:
-            items_desc = "\n".join([f"• **{r[1]}** ({to_fa_digits(f'{int(r[3]):,}')} تومان)" for r in companion_rows])
-            msg = f"""بله! فروشگاه **{target_sname}** علاوه بر این کالا، اقلام جانبی و مصرفی زیر را نیز در همین مغازه موجود دارد:\n\n{items_desc}\n\n"""
-            msg += f"""🛍️ **مزیت خرید یکجا از همین مغازه:**\n"""
-            msg += f"""۱. **صرفه‌جویی در رفت‌وآمد:** همه اقلام را یکجا از پیشخوان {target_sname} تحویل می‌گیرید.\n"""
-            msg += f"""۲. **اهرم تخفیف تجمیعی:** هنگام تسویه فاکتور پای پوز، بخواهید به دلیل خرید چندقلمی، ۵ تا ۷ درصد تخفیف نقدی روی سرجمع اعمال کنند."""
-
+        if same_shop:
+            items_desc = "\n".join(f"• **{c['title']}** ({_fa_toman(c['price_toman'])})" for c in same_shop)
+            msg = f"""بله، فروشگاه **{target_sname}** این اقلام مکمل را هم با قیمت ثبت‌شده دارد:\n\n{items_desc}\n\n"""
+            msg += """🛍️ **خرید یکجا از همین مغازه:** همه را از یک پیشخوان و با یک فاکتور می‌گیرید؛ برای خرید چندقلمی می‌توانید تخفیف بخواهید. موجودی را پیش از رفتن استعلام کنید."""
+            first = same_shop[0]
             rec_card = {
-                "product_id": companion_rows[0][0],
-                "title": companion_rows[0][1],
-                "category": companion_rows[0][2],
-                "brand": "",
-                "min_price": companion_rows[0][3],
+                "product_id": first["product_id"],
+                "title": first["title"],
+                "category": first["category_name"],
+                "brand": first.get("brand_name") or "",
+                "min_price": first["price_toman"],
                 "offline_shops_count": 1,
                 "best_shop": {
                     "shop_id": effective_sid,
                     "name": target_sname,
-                    "price": companion_rows[0][3],
+                    "price": first["price_toman"],
                     "hub": target_loc,
                     "parsed_address": {"mall_name": target_loc, "floor_label": "همین مغازه"},
-                    "hours": "ساعت کاری ثبت‌شده",
+                    "hours": hours_status(_shop_hours(cursor, effective_sid))["label"],
                     "distance_km": None,
                     "is_same_shop": True,
                     "same_shop_badge": f"🛍️ موجود در همین مغازه ({target_sname}) · خرید یکجا",
-                    "quality_badge": "🥇 جنس برتر و اورجینال (گارانتی معتبر شرکتی)" if companion_rows[0][5] == 0 else "نسخه اقتصادی",
+                    "quality_badge": first.get("quality_badge"),
                 }
             }
             return {
                 "message": msg,
                 "active_product": rec_card,
                 "suggested_prompts": [
-                    "تخفیف نقدی پای پوز در صورت خرید یکجا چقدر میشه؟",
                     "کدوم مغازه جنس بهتر و اورجینال داره؟",
                     "مسیر خرید رو تو پاساژ بچین",
+                    "استعلام تلفنی قبل از مراجعه حضوری",
                 ]
             }
-        else:
-            alt_rows = cursor.execute("""
-                SELECT p.product_id, p.persian_title, s.shop_id, s.name, s.location_label, o.price_toman, o.warranty
-                FROM offers o
-                JOIN products p ON o.product_id = p.product_id
-                JOIN shops s ON o.shop_id = s.shop_id
-                WHERE s.location_label = ? AND s.shop_id != ? AND o.price_toman IS NOT NULL
-                ORDER BY o.price_toman ASC LIMIT 2
-            """, (target_loc, effective_sid)).fetchall()
 
-            msg = f"""فروشگاه **{target_sname}** در حال حاضر لوازم جانبی مستقل این کالا را در سیستم ثبت نکرده است.\n\n"""
-            if alt_rows:
-                alt = alt_rows[0]
-                msg += f"""📍 **نزدیک‌ترین فروشگاه در همین {target_loc}:**\n"""
-                msg += f"""فروشگاه **{alt[3]}** متعلقات سازگار را با قیمت {to_fa_digits(f'{int(alt[5]):,}')} تومان موجود دارد و در نزدیکی همین مغازه است."""
-
-            return {
-                "message": msg,
-                "active_product": product,
-                "suggested_prompts": [
-                    "کدوم مغازه جنس بهتر و اورجینال داره؟",
-                    "تخفیف نقدی پای پوز در خرید حضوری",
-                    "استعلام پلمپ و رجیستری در سامانه همتا",
-                ]
-            }
+        msg = f"""برای فروشگاه **{target_sname}** قلم مکملی برای این کالا در ترب ثبت نشده است."""
+        nearby = [c for c in companions if c.get("is_same_mall")] or companions
+        if nearby:
+            c = nearby[0]
+            where = "در همین محدوده" if c.get("is_same_mall") else f"در {c.get('location_label') or 'محدوده دیگر'}"
+            msg += f"""\n\n📍 {where}: فروشگاه **{c['shop_name']}**، «{c['title']}» را با {_fa_toman(c['price_toman'])} دارد."""
+        return {
+            "message": msg,
+            "active_product": product,
+            "suggested_prompts": [
+                "کدوم مغازه جنس بهتر و اورجینال داره؟",
+                "اقلام مکمل برای تکمیل این خرید چیه؟",
+                "استعلام تلفنی قبل از مراجعه حضوری",
+            ]
+        }
 
     # ۱. تلاش برای دریافت پاسخ زنده و مقتدر از مدل هوش مصنوعی آنلاین (Arvan AlaaS / OpenAI)
     api_key = os.environ.get("ARVAN_AI_KEY") or os.environ.get("OPENAI_API_KEY")
@@ -1040,20 +1096,7 @@ def answer_consultation_inquiry(
             ai_response = f"""سلام! من **کَلَم**، مشاور خرید حضوری شما در ترب هستم. در خصوص شرایط ضمانت و گارانتی **{prod_title}**:\n\n"""
             if shop:
                 ai_response += f"📋 **وضعیت گارانتی ثبت‌شده:** فروشگاه **{shop_name}** در ترب گارانتی {warranty_text} را برای این کالا قید کرده است.\n\n"
-            ai_response += """✅ **موارد تحت پوشش گارانتی معتبر موتور ساعت:**
-• کارکرد دقیق و روان موتور (عدم توقف ناگهانی، نخوابیدن ساعت، یا جلو/عقب افتادن خارج از استاندارد).
-• عیوب ساختاری ناشی از خط مونتاژ یا نقص فنی کارخانه سازنده.
-• تعویض باتری اولیه در بازه مشخص (در مدل‌های باتری‌خور/کوارتز).
-
-❌ **موارد خارج از تعهد گارانتی:**
-• آسیب‌های فیزیکی، ضربه شدید، خط‌وخش بدنه و شکستگی شیشه.
-• استهلاک طبیعی، پارگی یا تغییر رنگ بند چرمی/فلزی بر اثر تعریق و استفاده روزمره.
-• نفوذ آب در صورتی که دسته کوک باز مانده باشد یا ساعت فاقد استاندارد مقاومت در برابر آب باشد.
-
-💡 **چک‌لیست پای پیشخوان قبل از پرداخت:**
-۱. **کارت ضمانت رسمی:** برگه یا کارت گارانتی ممهور به مهر فروشگاه با درج تاریخ روز و شماره سریال را تحویل بگیرید.
-۲. **تست عملکرد در حضور فروشنده:** سلامت کوک، گردش نرم عقربه‌ها و عملکرد تقویم را تست کنید.
-۳. **درج در فاکتور:** حتماً بخواهید عبارت «ضمانت اصالت و سلامت موتور ساعت به مدت ... ماه» در فاکتور رسمی قید شود."""
+            ai_response += _warranty_guide(product)
 
         # موضوع ب: فعال‌سازی، هزینه‌های پنهان، ریجستری و همتا
         elif any(w in norm_q for w in ("فعال", "ریجستر", "رجیستر", "همتا", "نرم افزار", "نرم‌افزار", "هزینه")):
@@ -1065,16 +1108,14 @@ def answer_consultation_inquiry(
         # موضوع ج: تخفیف نقدی پای پوز و چانه‌زنی تجمیع فاکتور
         elif any(w in norm_q for w in ("تخفیف", "پای پوز", "بردارم", "چانه")):
             ai_response = f"""🤝 **اهرم چانه‌زنی و تخفیف پای پوز در بازار:**\n\n"""
-            ai_response += """• **حاشیه سود لوازم جانبی:** سود قاب، گلس، بند و شارژر در بازار ۴۰ تا ۶۰ درصد است، در حالی که سود دستگاه اصلی ناچیز است.
-• **تاکتیک تجمیع:** به فروشنده بگویید «اگر لوازم جانبی را هم از خودتان بردارم، روی سرجمع فاکتور ۵ تا ۱۰ درصد تخفیف نقدی پای پوز می‌خواهم».
-• **گزینه جایگزین:** اگر تخفیف نقدی نداد، یک قلم جانبی (مانند گلس یا محافظ) را به عنوان هدیه خرید نقدی دریافت کنید."""
+            ai_response += """• **خرید چندقلمی:** اگر لوازم جانبی را هم از همان مغازه می‌خرید، روی سرجمع فاکتور تخفیف نقدی بخواهید.
+• **گزینه جایگزین:** اگر تخفیف نقدی نداد، یک قلم کوچک (مثل گلس یا محافظ) را به عنوان هدیه بخواهید.
+• **مقایسه قبل از چانه‌زنی:** قیمت همین کالا در فروشگاه‌های دیگر را در کَلَم ببینید تا بدانید چه قیمتی منصفانه است."""
 
         # موضوع د: تست فیزیکی و آب‌بندی در مغازه
         else:
             ai_response = f"""🛠️ **راهنمای بررسی فیزیکی پای پیشخوان برای {prod_title}:**\n\n"""
-            ai_response += """۱. **تست ارگونومی روی دست:** وزن، قفل بند و هماهنگی سایز را بررسی کنید. تنظیم سایز بند در اکثر مغازه‌ها رایگان انجام می‌شود.
-۲. **سلامت کلیدها و اهرم‌ها:** پیچ تنظیم را در حالت‌های مختلف بچرخانید؛ عملکرد باید کاملاً نرم و بدون گیرکردن باشد.
-۳. **مهلت تست فنی:** از فروشنده بخواهید حداقل ۴۸ ساعت مهلت تست در فاکتور رسمی قید نماید."""
+            ai_response += _inspection_guide(product)
 
     follow_up_prompts = [
         "استعلام تلفنی با فروشگاه برای هماهنگی مراجعه",

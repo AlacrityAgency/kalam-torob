@@ -36,6 +36,16 @@ def get_test_db():
     return sqlite3.connect(db_path)
 
 
+def require_real_dataset(conn):
+    """آزمون‌هایی که به کالاهای مشخص دیتاست واقعی ترب وابسته‌اند روی داده نمونه اجرا نمی‌شوند."""
+    try:
+        row = conn.execute("SELECT value FROM meta WHERE key = 'data_source'").fetchone()
+    except sqlite3.Error:
+        row = None
+    if row and row[0] == "sample":
+        raise unittest.SkipTest("requires the real Torob dataset (torob.db was built from sample data)")
+
+
 class TestSecurityAndPromptInjection(unittest.TestCase):
     """ابعاد امنیت، تزریق پرامپت، XSS و SQL Injection"""
 
@@ -100,6 +110,7 @@ class TestSecurityAndPromptInjection(unittest.TestCase):
             self.assertIsNotNone(res_context)
 
         # اطمینان از سلامت دیتابیس و عدم حذف جدول products
+        require_real_dataset(self.conn)
         prod_count = self.conn.execute("SELECT COUNT(*) FROM products").fetchone()[0]
         self.assertGreater(prod_count, 100)
 
@@ -212,6 +223,7 @@ class TestDynamicPromptEngineIntegrity(unittest.TestCase):
     def test_prm03_context_bleeding_prevention(self):
         """تضمین عدم نشت زمینه کالای قبل هنگام جابجایی دسته‌ها در چت"""
         # کاربر قبلاً در صفحه گوشی سامسونگ A54 بوده است
+        require_real_dataset(self.conn)
         context = {"active_product_id": "product_e6f545528fd4e7033e978b44"}
 
         # گام ۱: کاربر در چت ظروف یکبار مصرف را سرچ می‌کند

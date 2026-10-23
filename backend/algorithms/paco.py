@@ -67,7 +67,7 @@ def calculate_paco_score(base_product: dict, base_shop: dict, candidate_offer: d
         loc_desc = "موجود در همین مغازه (یک فاکتور بدون جابه‌جایی)"
         bundle_bonus = 1.40
         bundle_eligible = True
-        bargaining_tip = "موجود در همین مغازه؛ امکان گرفتن ۱۰ تا ۱۵ درصد تخفیف نقدی روی فاکتور کل"
+        bargaining_tip = "موجود در همین مغازه؛ برای خرید یکجا تخفیف نقدی روی فاکتور کل بخواهید"
     elif not base_shop:
         # مغازه مبدأ مشخص نیست؛ فاصله قابل محاسبه نیست
         psi_spatial = 0.50

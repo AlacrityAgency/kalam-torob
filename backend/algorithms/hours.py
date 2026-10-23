@@ -224,7 +224,8 @@ def _intersect(a, b):
     return out
 
 
-def common_open_window(raw_list, at: datetime | None = None, min_minutes: int = 45, days_ahead: int = 7):
+def common_open_window(raw_list, at: datetime | None = None, min_minutes: int = 45, days_ahead: int = 7,
+                       subject: str = "همه فروشگاه‌های مسیر باز هستند"):
     """
     زودترین بازه‌ای (از الان تا ۷ روز بعد) که همه فروشگاه‌های دارای ساعت کاری مشخص هم‌زمان باز باشند.
     فروشگاه‌های بدون ساعت کاری در محاسبه نیستند و تعدادشان جدا گزارش می‌شود.
@@ -256,6 +257,6 @@ def common_open_window(raw_list, at: datetime | None = None, min_minutes: int = 
             when = "امروز" if offset == 0 else "فردا" if offset == 1 else FA_DAY[weekday]
             note = f"؛ ساعت کاری {to_fa_digits(unknown_count)} فروشگاه ثبت نشده" if unknown_count else ""
             return {"found": True, "known_count": len(known), "unknown_count": unknown_count,
-                    "label": f"{when} از {_fmt(s)} تا {_fmt(e)} همه فروشگاه‌های مسیر باز هستند{note}"}
+                    "label": f"{when} از {_fmt(s)} تا {_fmt(e)} {subject}{note}"}
     return {"found": False, "known_count": len(known), "unknown_count": unknown_count,
             "label": "در هفت روز آینده زمانی که همه فروشگاه‌های مسیر هم‌زمان باز باشند پیدا نشد؛ مسیر را در دو روز تقسیم کنید"}

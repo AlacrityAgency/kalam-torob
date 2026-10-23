@@ -828,3 +828,60 @@ class DynamicPromptsAndPacoModelTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MissionAgentTests(unittest.TestCase):
+    """حالت ایجنت: مأموریت کامل از یک جمله"""
+
+    def setUp(self):
+        self.conn = make_db()
+
+    def test_clean_mission_text(self):
+        from backend.mission import clean_mission_text
+        self.assertEqual(clean_mission_text("یه گوشی A55 قسطی نزدیک من پیدا کن و هماهنگ کن"), "گوشی A55 قسطی نزدیک من")
+        self.assertEqual(clean_mission_text("برای همین کالا هماهنگ کن"), "")
+
+    def test_mission_runs_all_steps(self):
+        from backend.mission import run_mission
+        r = run_mission(self.conn, "گوشی سامسونگ A55 برام پیدا کن و هماهنگ کن", {"user_lat": 35.69, "user_lon": 51.41})
+        self.assertIn(r["status"], ("done", "partial"))
+        keys = [s["key"] for s in r["steps"]]
+        self.assertEqual(keys[:5], ["understand", "search", "compare", "follow_up", "plan"])
+        self.assertEqual(r["result"]["product"]["product_id"], "p1")
+        # آفر کپی (o6c) و قیمت تستی (o6x) هرگز انتخاب نمی‌شوند
+        self.assertNotIn(r["result"]["offer_id"], ("o6c", "o6x"))
+        self.assertIsNotNone(r["result"]["shop"]["lat"])
+        self.assertTrue(r["notice"])
+
+    def test_mission_uses_page_product_and_reports_failure(self):
+        from backend.mission import run_mission
+        r = run_mission(self.conn, "برای همین کالا هماهنگ کن", {"active_product_id": "p3"})
+        self.assertEqual(r["result"]["product"]["product_id"], "p3")
+        r = run_mission(self.conn, "هماهنگ کن", {})
+        self.assertEqual(r["status"], "failed")
+        r = run_mission(self.conn, "زیردریایی اتمی پیدا کن", {})
+        self.assertEqual(r["status"], "failed")
+        self.assertEqual(r["steps"][-1]["status"], "bad")
+
+    def test_mission_prefers_open_shop_over_unknown_hours(self):
+        from backend.mission import run_mission
+        r = run_mission(self.conn, "گوشی سامسونگ A55 پیدا کن", {})
+        decision = r["result"]["decision"]["action"]
+        attempts = next(s for s in r["steps"] if s["key"] == "follow_up")["lines"]
+        if any(line.startswith("✓") for line in attempts):
+            self.assertEqual(decision, "go")
+
+    def test_mission_endpoint(self):
+        with mock.patch.object(main, "DB_PATH", DB_FILE):
+            r = main.agent_mission(main.MissionRequest(message="گوشی سامسونگ A55 پیدا کن"), conn=make_db())
+        self.assertEqual(r["type"], "mission")
+
+    def test_route_stops_have_coordinates(self):
+        r = InPersonCartRouter(self.conn).solve_cart(["p1", "p3"])
+        for st in r["primary_route"]["stops"]:
+            self.assertIn("lat", st)
+            self.assertIn("lon", st)
+
+    def test_single_shop_unknown_hours_label(self):
+        r = common_open_window(["{}"], subject="مغازه باز است")
+        self.assertFalse(r["found"])
